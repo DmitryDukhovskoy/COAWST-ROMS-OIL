@@ -1,0 +1,19 @@
+NFLOATS == 10000
+Lfloats == T
+Fprint == T
+FRREC == 0
+Nocmp == 3
+OilComp == saturates aromatics res_asph
+OilDens == 800.0 860.0 1030.0
+DoilMn == 500.0e-6
+FlxVoilDay == 3000.0
+CWndOil == 0.01 
+DfsOil == 15.0
+
+POS = G, C, T,    N,     Ft0,    Fx0,      Fy0,     Fz0,    Fdt,   Fdx,   Fdy,   Fdz
+
+      1  1  1  2000    0.d0   -88.367d0 28.737d0 -1400.d0 0.01d0 0.d0   0.d0  0.d0
+      1  1  1  2000    0.d0   -88.369d0 28.739d0 -1400.d0 0.01d0 0.d0   0.d0  0.d0
+      1  1  1  2000    0.d0   -88.372d0 28.742d0 -1400.d0 0.01d0 0.d0   0.d0  0.d0
+      1  1  1  2000    0.d0   -88.369d0 28.735d0 -1400.d0 0.01d0 0.d0   0.d0  0.d0
+      1  1  1  2000    0.d0   -88.372d0 28.732d0 -1400.d0 0.01d0 0.d0   0.d0  0.d0

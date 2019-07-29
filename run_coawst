@@ -1,0 +1,21 @@
+#!/bin/bash
+##SBATCH -p coaps_q
+#SBATCH -p coaps18_q
+##SBATCH -p genacc_q
+##SBATCH -p quicktest
+##SBATCH -n 72
+#SBATCH -n 32
+##SBATCH -e %J.error
+#SBATCH -t 40:00:00
+#SBATCH -o %J.out
+E=oil_03
+
+cd /gpfs/research/coaps/home/ddmitry/COAWST/trunk
+
+module load intel-openmpi
+
+srun -n 32 ./coawstM Projects/${E}/ocean_${E}.in > log_${E}.out
+# Debuggin option
+# Specify USE_DEBUG in compiling make file
+#srun -n 96 ./coawstG Projects/${E}/ocean_${E}.in > log_${E}.out
+#srun -n 96 ./coawstM Projects/GOM_08/ocean_GOM_08.in > log.out

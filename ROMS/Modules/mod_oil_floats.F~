@@ -1,0 +1,22 @@
+#include "cppdefs.h"
+      MODULE mod_oil_Eulvar
+/*
+*************************************************** DD  **
+**       Not used yet, keep extension other than *.F                  **
+**       to prevent compiling
+** This module declares Lagrangian oil drifters                       **
+** parameteres. They are usually read from the appropriate input      **
+** script.                                                            **
+**                                                                    **
+** Note that all the *.h files are located in ROMS/Nonlinear/Oil      **
+** and included within  <...>  to allow the user to customize any of  **
+** them in the project directory  while keeping the distributed code  **
+** intact (check the build script for details).                       **
+**                                                                    **
+************************************************************************
+*/
+#if defined FLOATS && defined FLOAT_OIL
+# include <oil_Eulervar.h>
+#endif
+
+      END MODULE mod_oil_Eulvar

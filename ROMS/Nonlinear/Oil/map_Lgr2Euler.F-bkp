@@ -1,0 +1,238 @@
+#include "cppdefs.h"
+
+      MODULE lagr2euler_mod
+
+!==============================================  Dmitry S Dukhovskoy ===
+!                                                                      !
+!=======================================================================
+!                                                                      !
+!  This routine maps oil variables from Lagrangain -> Eulerian coord   !
+!                                                                      !
+!                                                                      !
+!=======================================================================
+!
+      implicit none
+
+      PRIVATE
+      PUBLIC :: lagr2euler
+
+      CONTAINS
+
+!
+!***********************************************************************
+      SUBROUTINE lagr2euler(ng, tile, Lstr, Lend)
+!***********************************************************************
+!
+      USE mod_param
+      USE mod_floats
+      USE mod_scalars
+      USE mod_grid
+      USE mod_stepping
+      USE mod_oil_Eulvar
+!
+!  Imported variable declarations.
+!
+      integer, intent(in) :: ng, tile, Lstr, Lend
+!
+!  Local variable declarations.
+!
+# include "tile.h"
+!
+      CALL lagr2euler_tile(ng, tile,                                    &
+     &                     LBi, UBi, LBj, UBj,                          &
+     &                     IminS, ImaxS, JminS, JmaxS,                  &
+     &                     Lstr, Lend,                                  &
+     &                     OIL3D(ng) % Coil,                            &
+     &                     OIL3D(ng) % Doil,                            &
+     &                     OIL3D(ng) % NFLT3D,                          &
+     &                     nf(ng),                                      &
+     &                     DRIFTER(ng) % track,                         &
+     &                     DRIFTER(ng) % bounded,                       &
+     &                     GRID(ng) % omn,                              &
+     &                     GRID(ng) % Hz,                               &
+     &                     GRID(ng) % z_r,                              & 
+     &                     GRID(ng) % z_w)
+
+      RETURN
+      END SUBROUTINE lagr2euler
+
+!
+!***********************************************************************
+      SUBROUTINE lagr2euler_tile(ng, tile,                              &
+     &                           LBi, UBi, LBj, UBj,                    &
+     &                           IminS, ImaxS, JminS, JmaxS,            &
+     &                           Lstr, Lend,                            &
+     &                           Coil, Doil, NFLT3D, nf,                &
+     &                           track, bounded, omn, Hz, z_r, z_w)
+!***********************************************************************
+!
+      USE mod_param
+      USE mod_floats
+      USE mod_scalars
+      USE mod_grid
+      USE mod_parallel
+
+      implicit none
+
+!
+!  Imported variable declarations
+!
+      integer, intent(in) :: ng, tile
+      integer, intent(in) :: LBi, UBi, LBj, UBj
+      integer, intent(in) :: IminS, ImaxS, JminS, JmaxS
+      integer, intent(in) :: Lstr, Lend, nf
+#ifdef ASSUMED_SHAPE
+      real(r8), intent(in) :: track(:,0:,:)    
+      real(r8), intent(in) :: omn(LBi:,LBj:)
+      real(r8), intent(in) :: Hz(LBi:,LBj:,:)
+      real(r8), intent(in) :: z_r(LBi:,LBj:,:)
+      real(r8), intent(in) :: z_w(LBi:,LBj:,0:)
+
+      logical, intent(in) :: bounded(:)
+
+      integer, intent(inout) :: NFLT3D(LBi:,LBj:,:)
+      real(r8), intent(inout) :: Coil(LBi:,LBj:,:,:)
+      real(r8), intent(inout) :: Doil(LBi:,LBj:,:)
+#else
+      real(r8), intent(in) :: track(NFV(ng),0:NFT,Nfloats(ng)) 
+      real(r8), intent(in) :: omn(LBi:UBi,LBj:UBj)
+      real(r8), intent(in) :: Hz(LBi:UBi,LBj:UBj,N(ng))
+      real(r8), intent(in) :: z_r(LBi:UBi,LBj:UBj,N(ng))
+      real(r8), intent(in) :: z_w(LBi:UBi,LBj:UBj,0:N(ng))
+
+      logical, intent(in) :: bounded(Nfloats(ng))
+
+      integer, intent(inout) :: NFLT3D(LBi:UBi,LBj:UBj,N(ng))
+      real(r8), intent(inout) :: Coil(LBi:UBi,LBj:UBj,N(ng),Nocmp)
+      real(r8), intent(inout) :: Doil(LBi:UBi,LBj:UBj,N(ng))
+#endif
+!
+!  Local variables
+!
+      integer :: i, j, k, ic, l, nfgrd
+      integer :: mxNflt  ! for debugging
+!      integer :: NFLT3D(IminS:ImaxS,JminS:JmaxS,N(ng))
+!
+      real(r8) :: Zstr, Zend, Xstr, Xend, Ystr, Yend
+      real(r8) :: xflt, yflt, zflt, rhoo
+      real(r8) :: frsat, frarom
+
+      real(r8) :: GrdVol(IminS:ImaxS,JminS:JmaxS,N(ng))
+      real(r8) :: MoilGrd(IminS:ImaxS,JminS:JmaxS,N(ng),Nocmp)
+      real(r8) :: wfroil(Nocmp)
+
+      logical :: lchck
+
+#include "set_bounds.h"
+!
+      lchck = .TRUE.
+
+      NFLT3D=0
+      MoilGrd=0.0_r8
+      GrdVol=0.0_r8
+      mxNflt=0
+
+# ifdef OIL_DEBUG      
+!      IF (MyRank.eq.MyMaster) THEN
+      IF (lchck .and. (MyRank.eq.29 .or. MyRank.eq.MyMaster) ) THEN
+        print*,'My Rank =', MyRank, 'Nocmp=',Nocmp
+        print*,'map_Lagr2Euler.F: LBi=',LBi,' UBi=',UBi,      &
+     &         ' LBj=',LBj,' UBj=',UBj
+        print*,'  IminS=',IminS,' ImaxS=',ImaxS,' JminS=',JminS, &
+     &         '  JmaxS=',JmaxS,'N=',N(ng)
+        print*,' Jstr=',Jstr,' Jend=',Jend,' Istr=',Istr, &
+     &         ' Iend=',Iend,' Lstr=',Lstr,' Lend=',Lend
+      ENDIF
+# endif
+!
+! Count # of floats in every grid cell
+! Then calculate oil mass in every gird cell
+! and finally oil conc = M oil / grid cell
+! Do this for all components 
+      K_LOOP : DO k=1,N(ng)
+
+      Zstr=REAL(k)-1.0_r8
+      Zend=REAL(k)
+
+      J_LOOP :  DO j=Jstr-1,Jend+1
+
+      Ystr=REAL(j)-0.5_r8
+      Yend=REAL(j)+0.5_r8
+
+      I_LOOP : DO i=Istr-1,Iend+1
+
+      Xstr=REAL(i)-0.5_r8
+      Xend=REAL(i)+0.5_r8
+      GrdVol(i,j,k)=omn(i,j)*Hz(i,j,k)
+
+! Floats:
+      DO l=Lstr,Lend
+        IF (bounded(l)) THEN
+          xflt=track(ixgrd,nf,l)
+          yflt=track(iygrd,nf,l)
+          zflt=track(izgrd,nf,l)
+!     IF (xflt.le.1.0e-6 .or.            &
+!     yflt.le.1.0e-6 .or.            &
+!     zflt.le.1.0e-6) CYCLE
+!
+          IF (xflt.ge.Xstr .and.                                        & 
+     &        xflt.lt.Xend .and.                                        &
+     &        yflt.ge.Ystr .and.                                        &
+     &        yflt.lt.Yend .and.                                        &
+     &        zflt.ge.Zstr .and.                                        &
+     &        zflt.lt.Zend)  THEN
+
+            NFLT3D(i,j,k)=NFLT3D(i,j,k)+1
+            Doil(i,j,k)=Doil(i,j,k)+track(isizo,nf,l)
+            rhoo=track(iroil,nf,l)
+!     
+!     This part of the code will need to be modified 
+!     if varying Nocmp = # of oil components (fractions) is needed
+!     Currently it is hard-coded for Nocmp=3 
+!     SAR+A components in agreement
+!     with oil_plume.h and Modules/mod_floats.F
+!     
+!     Weight fraction of oil components:
+            wfroil(1)=track(isats,nf,l)
+            wfroil(2)=track(iarom,nf,l)
+            wfroil(3)=1.0_r8-(frsat+frarom)
+
+!     Oil mass in grd cell by components
+            DO ic=1,Nocmp
+               MoilGrd(i,j,k,ic)=MoilGrd(i,j,k,ic)+                     &
+     &                           VoilFlt*rhoo*wfroil(ic)
+            ENDDO
+
+          ENDIF
+        ENDIF
+      ENDDO
+
+      END DO I_LOOP
+      END DO J_LOOP
+      END DO K_LOOP     
+
+      DO k=1,N(ng)
+        DO j=Jstr,Jend
+          DO i=Istr,Iend
+            nfgrd=NFLT3D(i,j,k)
+            mxNflt=max(mxNflt,nfgrd)
+            IF (nfgrd.eq.0) CYCLE
+            Doil(i,j,k)=Doil(i,j,k)/REAL(nfgrd) ! mean oil size, gr cell
+!            
+            DO ic=1,Nocmp
+              Coil(i,j,k,ic)=MoilGrd(i,j,k,ic)/GrdVol(i,j,k)
+            ENDDO
+!
+          ENDDO
+        ENDDO
+      ENDDO
+
+#ifdef OIL_DEBUG
+      IF (MyRank.eq.MyMaster) THEN
+        print*,'lagr2euler_tile done, Euler max Nflt=',mxNflt
+      ENDIF
+#endif
+      RETURN
+      END SUBROUTINE lagr2euler_tile
+
+      END MODULE lagr2euler_mod 
