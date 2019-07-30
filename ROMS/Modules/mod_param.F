@@ -56,9 +56,6 @@
 !               optimals adjoint state vector.                         !
 # endif
 #endif
-!#ifdef FLOAT_OIL
-!  Nocmp      Number of oil components (e.g., sats,arom., resins, ..   ! DDMITRY 
-!#endif
 !  NSA        Number of state array for error covariance.              !
 !  NSV        Number of model state variables.                         !
 !                                                                      !
@@ -510,13 +507,7 @@
 !
       integer, allocatable :: NFV(:)
 #endif
-!#ifdef FLOAT_OIL
-! DDMITRY
-! Number of oil components, 
-! for now 3: saturates, aromatics, resins+asphaltenes
-!      integer, parameter :: Nocmp = 3
-! END DD
-!#endif
+
 #ifdef STATIONS
 !
 !-----------------------------------------------------------------------

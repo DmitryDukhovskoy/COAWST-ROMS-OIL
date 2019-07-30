@@ -50,6 +50,7 @@ POS = G, C, T,    N,     Ft0,    Fx0,      Fy0,     Fz0,    Fdt,   Fdx,   Fdy,  
 Change definitions in the <expt>.h
 To turn the oil model on with Lagrangian -> Euler mapping of the oil fields
 two-equaltion algorithm for the oil plume is implemented
+
 #define FLOATS\
 #define FLOAT_OIL\
 #define FLOAT_VWALK\
@@ -58,9 +59,11 @@ two-equaltion algorithm for the oil plume is implemented
 #define OIL_EULR\
   
 wind drift is automaticly "on" when bulk fluxes are defined unless CWndOil =0 in the <expt>_floats.in
+
 #define  BULK_FLUXES\
   
 To turn off the oil model and ROMS as a stand-alone model:
+
 #undef FLOATS\
 #undef FLOAT_OIL\
 #undef FLOAT_VWALK\

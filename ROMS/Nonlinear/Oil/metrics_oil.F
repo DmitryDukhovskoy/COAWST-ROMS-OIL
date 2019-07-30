@@ -104,9 +104,9 @@
       integer :: nfltLagr, nfltEulr, nff
       integer :: i, j, k, ic, l, Nflt2
 #ifdef DISTRIBUTE
-      real(r8), dimension(6) :: buffer
       character (len=3), dimension(6) :: op_handle
 #endif
+      real(r8), dimension(6) :: buffer
       real(r8) :: Xstr, Xend, Ystr, Yend
       real(r8) :: minC, maxC, avC, minD, maxD, avD
       real(r8) :: dmm, cmm
@@ -117,10 +117,11 @@
       buffer    = 0.0
       buffer(3) = 1.0e6
       buffer(5) = 1.0e6 
+
 !  Calculate total number of active floats in Lagr. space
 ! There are 2 ways to count floats
 ! Keep them both as an example
-! (1) sum across the tiles
+! (1) sum across the tiles - for DISTRIBUTED memory configuration
       Xstr=REAL(Istr,r8)-0.5_r8
       Xend=REAL(Iend,r8)+0.5_r8
       Ystr=REAL(Jstr,r8)-0.5_r8
@@ -134,21 +135,24 @@
           my_thread(l)=.TRUE.
         ENDIF
 
+
         IF (my_thread(l) .and. bounded(l)) THEN
           buffer(1)=buffer(1)+1.0
-!          print*,'===== N flt',buffer(1),'tile=',tile,'Istr=',Istr,     &
-!     &           'Jstr=',Jstr
         ENDIF
       ENDDO
 !
 ! (2) since bounded() array is transmitted across the tiles
 ! simply sum over 1 tile
       Nflt2=0
+#ifdef DISTRIBUTE
       IF (Master) THEN
+#endif
         DO l=Lstr,Lend
           IF (bounded(l)) Nflt2=Nflt2+1
         ENDDO
+#ifdef DISTRIBUTE
       ENDIF
+#endif
 
 !  Calculate total number of active floats in Eulerian space (3D array)
 !  min, max, mean Coil and Doil
@@ -166,8 +170,8 @@
             ENDIF
 # endif
             IF (nff.eq.0) CYCLE
-            buffer(2)=buffer(2)+REAL(nff)
 
+            buffer(2)=buffer(2)+REAL(nff)
             dmm=Doil(i,j,k)
             IF (nff>0) THEN
               minD=min(minD,dmm)
@@ -187,11 +191,12 @@
             ENDIF
             buffer(5)=minC
             buffer(6)=maxC
-
           ENDDO
         ENDDO
       ENDDO
 
+
+#ifdef DISTRIBUTE
       op_handle(1)='SUM'
       op_handle(2)='SUM'
       op_handle(3)='MIN'
@@ -199,24 +204,31 @@
       op_handle(5)='MIN'
       op_handle(6)='MAX'
 
-#ifdef DISTRIBUTE
-      CALL mp_reduce (ng, model, 6, buffer, op_handle) ! note 2 should = dim of buffer & op_handle
+      CALL mp_reduce (ng, model, 6, buffer, op_handle) 
+
       nfltLagr=buffer(1)
       nfltEulr=buffer(2)
       minD=buffer(3)
       maxD=buffer(4)
       minC=buffer(5)
       maxC=buffer(6)
+#else
+      nfltLagr=buffer(1)
+      nfltEulr=buffer(2)
 #endif      
 
 #ifdef OIL_DEBUG
+# ifdef DISTRIBUTE
       IF (Master) THEN
-        write(stdout,10) ng, nfltLagr, Nflt2, nfltEulr, minD, maxD,     &
+# endif
+        write(stdout,10) nfltLagr, Nflt2, nfltEulr, minD, maxD,         &
      &                   minC, maxC
+# ifdef DISTRIBUTE
       ENDIF
+# endif
 #endif
 
- 10   FORMAT(/,'    Lagrangian -> Eulerian Mapping (ng=',i2,') :',/,    &
+ 10   FORMAT(/,'    Lagrangian -> Eulerian Mapping:             ',/,    &
      &         '================================',/,                    &
      &         'Released floats: (1) Lagr=',i6,' (2) Lagr=',i6,         &
      &         '  N floats Mapped to Eulerian=',i6,/,                   &
