@@ -217,13 +217,14 @@
 # ifdef DISTRIBUTE
       real(r8) :: Xstr, Xend, Ystr, Yend
       real(r8), dimension(Nfloats(ng)*NFV(ng)*(NFT+1)) :: Fwrk
+# endif
+
+# ifdef FLOAT_OIL
 ! DDMITRY
-!      real(r8), dimension(Nfloats(ng)*Nocmp) :: FwrkRoil ! init oil dens comp
-!      real(r8), dimension(Nfloats(ng))       :: FwrkDoil ! init Doil
-!      real(r8), dimension(Nfloats(ng)*Nocmp) :: FwrkWoil  ! init weight fr oil comp 
       integer :: NfltA ! active floats
 ! DD END
 # endif
+
 # ifdef DIAPAUSE
       CALL caldate (r_date, tdays(ng), year, yday, month, iday, hour)
 # endif

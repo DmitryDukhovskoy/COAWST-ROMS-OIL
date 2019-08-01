@@ -1006,8 +1006,8 @@
 ! Map Lagrangian -> Euler oil floats for biology/sediments modules
 ! model=iNLM nonlinear model assumed for now
 #  if defined FLOAT_OIL && defined OIL_EULR
-#   ifdef OIL_DEBUG
                 DO tile=last_tile(ng),first_tile(ng),-1
+#   ifdef OIL_DEBUG
                   IF (Master) THEN
                      print*,'   ^^^^^^^^^^^^ TILE= ',tile
                      print*,'Calling lagr2euler'

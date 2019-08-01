@@ -1,5 +1,6 @@
 #include "cppdefs.h"
       MODULE nf_iwrite3d_mod
+#if defined FLOAT_OIL && defined OIL_EULR
 !
 !svn $Id: nf_iwrite3d.F $
 !===  DDMITRY ===================================== Dmitry Dukhovskoy ==
@@ -640,5 +641,8 @@
 
       RETURN
       END FUNCTION nf_iwrite3d
+#endif 
+
 #endif
+
       END MODULE nf_iwrite3d_mod

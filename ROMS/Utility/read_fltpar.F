@@ -51,7 +51,7 @@
 
 ! DDMITRY
       integer :: Nfrls
-      real(r8) :: Nflt1day, Fdt1day
+      real(r8) :: Nflt1day, Fdt1day, Nflt_tot
 ! END DMITRY
       character (len=1  ), parameter :: blank = ' '
 
@@ -182,10 +182,12 @@
 ! Here release frequency Fdt is assumed to be the same = Fdt
 ! for all release locations, will need to be 
 ! modified for spatially varying release frequency
+      ng=1
       Nfrls=nentry(igrid) ! # of floats released at 1 instance
       Fdt1day=Fdt(1,1) 
-      Nflt1day=real(Nfrls)/Fdt1day
+      Nflt1day=REAL(Nfrls)/Fdt1day ! # of floats released in 1 day
       VoilFlt=FlxVoilDay/Nflt1day
+      Nflt_tot=Nflt1day*REAL(ntimes(ng))*dt(ng)/(3600.0*24.0) ! total # floats for the simulation
 ! END DD
 !
 !  Turn off the processing of floats if not running long enough to
@@ -216,8 +218,8 @@
             DO i=1,Nocmp
               WRITE(out,87) i, RhoOilComp(i)
             ENDDO
-            WRITE (out,88) Nfrls, Fdt1day, FlxVoilDay, VoilFlt,         &
-     &                      CWndOil, DfsOil
+            WRITE (out,88) Nfrls, Fdt1day, Nflt_tot, FlxVoilDay,        &
+     &                     VoilFlt, CWndOil, DfsOil
 ! END DD
             WRITE (out,90) ng
             DO i=1,nentry(ng)
@@ -367,10 +369,11 @@
      &        /,  ' ==================================',/,/)
  87   FORMAT(/,5x,'Comp. ',i2.2,2x,'=',2x,f8.2,1x,'kg/m3')
  88   FORMAT(/,1x, 'Floats Released at 1 time=',i5,2x,                  &
-     &        'Release TStep, day=',f7.5,2x,                            &
-     &        'Oil Vol. Flux =',f8.1,' m3/day',1x,/,                    &
-     &        'Vol.Oil in 1 float=',e12.5,' m3',/,                      &
-     &        'Oil wind coeff=',f6.4,' Oil Diff=',f6.3,' m2/s',/,/)
+     &        'Release TStep, day=',f7.5,/,                             &
+     &        1x,' Total # of floats needed to complete run: ',f8.1,    &
+     &        1x,/,'Oil Vol. Flux =',f8.1,' m3/day',1x,/,               &
+     &        1x,'Vol.Oil in 1 float=',e12.5,' m3',/,                   &
+     &        1x,'Oil wind coeff=',f6.4,' Oil Diff=',f6.3,' m2/s',/,/)
 ! END DD
   90  FORMAT (/,/,' Floats Initial Locations, Grid: ',i2.2,             &
      &        /,  ' ==================================',/,/,            &
