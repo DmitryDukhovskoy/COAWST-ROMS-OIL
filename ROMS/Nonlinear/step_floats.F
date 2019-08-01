@@ -252,12 +252,14 @@
 !  their own tile.
 !
       Npts=NFV(ng)*(NFT+1)*Nfloats(ng)
+# if defined FLOAT_OIL
 ! DDMITRY
       Nopts=Nfloats(ng)*Nocmp
       ifltNB=0
       ifltB=0
       ifltE=0
 !DD END
+# endif
       Xstr=REAL(BOUNDS(ng)%Istr(MyRank),r8)-0.5_r8
       Xend=REAL(BOUNDS(ng)%Iend(MyRank),r8)+0.5_r8
       Ystr=REAL(BOUNDS(ng)%Jstr(MyRank),r8)-0.5_r8
@@ -269,16 +271,22 @@
      &      (Ystr.le.track(iygrd,nf,l)).and.                            &
      &      (track(iygrd,nf,l).lt.Yend)) THEN
           my_thread(l)=.TRUE.
+# if defined FLOAT_OIL
 ! DDMITRY
           ifltB=ifltB+1
 !DD END
+# endif
         ELSE IF (Master.and.(.not.bounded(l))) THEN
           my_thread(l)=.TRUE.
+# if defined FLOAT_OIL
 ! DDMITRY
           ifltNB=ifltNB+1
 !DD END
+# endif
         ELSE
+# if defined FLOAT_OIL
           ifltE=ifltE+1  ! DDMITRY
+#  endif
           DO j=0,NFT
             DO i=1,NFV(ng)
               track(i,j,l)=Fspv
@@ -333,9 +341,9 @@
 ! For Oil - vertical plume velocity is added 
 !-----------------------------------------------------------------------
 !
+#  ifdef OIL_DEBUG
 ! DDMITRY
       ifltX=0
-#  ifdef OIL_DEBUG
       DO l=Lstr,Lend
         IF (my_thread(l).and.bounded(l)) THEN
 !          print*,'Step Floats: 1. Predict.calling vwalk: l=',l,         & 
@@ -353,10 +361,15 @@
           EXIT
         ENDIF
       ENDDO  
-#  endif
 ! DD END
-!      CALL vwalk_floats (ng, Lstr, Lend, .TRUE., my_thread, nudg)
-      CALL vwalk_floats (ng, Lstr, Lend, .TRUE., my_thread, nudg, ifltX) ! DDMITRY: ifltX
+#  endif
+#  if defined FLOAT_OIL
+! DDMITRY
+      CALL vwalk_floats (ng, Lstr, Lend, .TRUE., my_thread, nudg, ifltX) 
+! END DD
+#  else
+      CALL vwalk_floats (ng, Lstr, Lend, .TRUE., my_thread, nudg)
+#  endif
 ! DDMITRY
 !#  ifdef OIL_DEBUG
 !      DO l=Lstr,Lend
@@ -803,8 +816,11 @@
 !        ENDIF
 !      ENDDO  
 !
-!      CALL oil_floats (ng, Lstr, Lend, .TRUE., my_thread)
-      CALL oil_floats (ng, Lstr, Lend, .TRUE., my_thread,ifltX)  ! DDMITRY ifltX
+# if defined FLOAT_OIL
+      CALL oil_floats (ng, Lstr, Lend, .TRUE., my_thread,ifltX)  
+# else
+      CALL oil_floats (ng, Lstr, Lend, .TRUE., my_thread)
+# endif
 !
 #  ifdef OIL_DEBUG
       DO l=Lstr,Lend
@@ -1075,19 +1091,23 @@
 !-----------------------------------------------------------------------
 !
       HalfDT=0.5_r8*dt(ng)
+# if defined FLOAT_OIL && defined OIL_DEBUG
 ! DDMITRY
       ifltB = 0
       i=0
 ! DD END
+# endif
       DO l=Lstr,Lend
         IF (.not.bounded(l).and.                                        &
      &      (time(ng)-HalfDT.le.Tinfo(itstr,l).and.                     &
      &       time(ng)+HalfDT.gt.Tinfo(itstr,l))) THEN
           bounded(l)=.TRUE.
+# if defined FLOAT_OIL && defined OIL_DEBUG
 ! DDMITRY
           IF (ifltB.eq.0) ifltB=l
           i=i+1
 ! DD END
+# endif
 
           IF ((Tinfo(ixgrd,l).lt.0.5_r8).or.                            &
      &        (Tinfo(iygrd,l).lt.0.5_r8).or.                            &
@@ -1449,9 +1469,12 @@
 !  step.
 !-----------------------------------------------------------------------
 !
-!      CALL vwalk_floats (ng, Lstr, Lend, .FALSE., my_thread, nudg)
-      
-      CALL vwalk_floats (ng, Lstr, Lend, .FALSE., my_thread, nudg,ifltX) ! DDTMIRY ifltX
+#  if defined FLOAT_OIL && defined OIL_DEBUG      
+      CALL vwalk_floats (ng, Lstr, Lend, .FALSE., my_thread, nudg,ifltX)
+#  else
+      CALL vwalk_floats (ng, Lstr, Lend, .FALSE., my_thread, nudg)
+#  endif
+
 # endif
 # ifdef SOLVE3D
 #  ifdef FLOAT_STICKY
