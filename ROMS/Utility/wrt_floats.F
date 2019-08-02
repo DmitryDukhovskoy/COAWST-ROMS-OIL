@@ -37,6 +37,7 @@
 
       real(r8), dimension(Nfloats(ng)) :: Tout
 ! DDMITRY
+# if defined FLOAT_OIL
 ! I found that saved i,j indices of the Lagrangian
 ! floats in the netcdf do not match LON/LAT arrays
 ! but shifted by -1 index in both directions
@@ -48,6 +49,7 @@
 ! floats' i, j indices
 !
       real(r8), dimension(Nfloats(ng),Nocmp) :: Tout2d  ! DDMITRY
+# endif
       real(r8) :: Ioffset=1.0, Joffset=1.0
 ! END DD
 !

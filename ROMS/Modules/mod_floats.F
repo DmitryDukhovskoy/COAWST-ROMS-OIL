@@ -354,25 +354,19 @@
 #  else
         ic=16
 #  endif
-# else
-#  ifdef FLOAT_VWALK
-        ic=12
-#  else
-        ic=10
-#  endif
-# endif
+!# else
+!#  ifdef FLOAT_VWALK
+!        ic=12
+!#  else
+!        ic=10
+!#  endif
+!# endif
 ! DDMITRY
-# ifdef FLOAT_OIL
+# elif defined FLOAT_OIL
 #  ifdef FLOAT_VWALK
         ic=21
 #  else
         ic=19
-#  endif
-# else
-#  ifdef FLOAT_VWALK
-        ic=12
-#  else
-        ic=10
 #  endif
         Nocmp = 0 ! # of oil compnents initial value, set in oil*.in
         DoilMn = -999.0 ! mean oil size, set in oil*.in
@@ -380,6 +374,12 @@
         VoilFlt = -999.0    ! oil volume in 1 float
         DfsOil = -999.0 ! oil diffusiv., used in rand walk approxim. 
         CWndOil = -999.0 ! wind-oil coefficient
+# else
+#  ifdef FLOAT_VWALK
+        ic=12
+#  else
+        ic=10
+#  endif
 # endif
 ! DD END
         DO i=1,MT
