@@ -190,6 +190,9 @@
 # ifdef T_PASSIVE
       USE pt3dbc_mod, ONLY : pt3dbc_tile
 # endif
+# if defined OFFLINE_BIOLOGY
+      USE mod_biology
+# endif
 !
 !  Imported variable declarations.
 !
