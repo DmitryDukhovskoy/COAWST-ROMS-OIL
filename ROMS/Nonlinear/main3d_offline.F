@@ -2,7 +2,7 @@
 #if defined NONLINEAR && defined SOLVE3D && (defined OFFLINE)
       SUBROUTINE main3d_offline (RunInterval)
 !
-!svn $Id$
+!svn $Id$: main3d_offline.F 830 2017-01-24 21:21:11Z arango $
 !=======================================================================
 !  Copyright (c) 2002-2016 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
@@ -114,6 +114,7 @@
       USE step_floats_mod, ONLY : step_floats
 # endif
       USE wvelocity_mod, ONLY : wvelocity
+      USE dateclock_mod, ONLY : time_string
 !
       implicit none
 !
@@ -452,4 +453,3 @@
       RETURN
       END SUBROUTINE main3d_offline
 #endif
- 
