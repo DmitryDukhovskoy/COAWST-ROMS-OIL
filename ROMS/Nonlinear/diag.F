@@ -171,17 +171,17 @@
 #  ifdef BIOLOGY
       integer :: Nreduce
 #  else
-      integer, parameter :: Nreduce = 5
+      integer, parameter :: Nreduce = 6
 #  endif
       integer, parameter :: Ncourant = 7
 # else
       integer, parameter :: Nreduce = 4
       integer, parameter :: Ncourant = 5
 # endif
-      real(r8), dimension(Nreduce) :: buffer
+      real(r8), allocatable :: buffer(:)
       real(r8), dimension(Ncourant) :: Courant
-      character (len=3), dimension(Nreduce) :: op_handle
-      character (len=6), dimension(Nreduce) :: C_handle
+      character (len=3), allocatable :: op_handle(:)
+      character (len=6), allocatable :: C_handle(:)
 #else
       integer :: my_threadnum
 #endif
@@ -217,11 +217,11 @@
 !
 #ifdef DISTRIBUTE
 # ifdef BIOLOGY
-      Nreduce = 5 + NBT
+      Nreduce = 6 + NBT
 # endif
-!     IF (.not. allocated(buffer))    allocate (buffer(Nreduce))
-!     IF (.not. allocated(op_handle)) allocate (op_handle(Nreduce))
-!     IF (.not. allocated(C_handle))  allocate (C_handle(Nreduce))
+     IF (.not. allocated(buffer))    allocate (buffer(Nreduce))
+     IF (.not. allocated(op_handle)) allocate (op_handle(Nreduce))
+     IF (.not. allocated(C_handle))  allocate (C_handle(Nreduce))
 #endif
 
       IF (MOD(iic(ng)-1,ninfo(ng)).eq.0) THEN
