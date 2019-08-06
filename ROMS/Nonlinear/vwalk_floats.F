@@ -30,7 +30,11 @@
 !
 !***********************************************************************
       SUBROUTINE vwalk_floats (ng, Lstr, Lend, Predictor,               &
-     &                         my_thread, nudg,ifltX)  ! DDMITRY ifltX
+#if defined FLOAT_OIL
+     &                         my_thread, nudg,ifltX) ! DDMITRY
+# else
+     &                         my_thread, nudg) 
+#endif
 !***********************************************************************
 !
       USE mod_param
@@ -40,8 +44,9 @@
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, Lstr, Lend
+#if defined FLOAT_OIL
       integer, intent(in) :: ifltX  ! DDMITRY
-
+#endif
       logical, intent(in) :: Predictor
 # ifdef ASSUMED_SHAPE
       logical, intent(in) :: my_thread(Lstr:)
@@ -65,8 +70,13 @@
      &                        DRIFTER(ng) % Tinfo,                      &
      &                        DRIFTER(ng) % rwalk,                      &
      &                        nudg,                                     &
+#if defined FLOAT_OIL
      &                        DRIFTER(ng) % track,                      &
      &                        ifltX) ! DDMITRY
+#else
+                              DRIFTER(ng) % track)
+#endif
+
 # ifdef PROFILE
       CALL wclock_off (ng, iNLM, 10, __LINE__, __FILE__)
 # endif
@@ -79,7 +89,11 @@
       SUBROUTINE vwalk_floats_tile (ng, Lstr, Lend,                     &
      &                              nfm3, nfm2, nfm1, nf, nfp1,         &
      &                              Predictor, my_thread, bounded,      &
-     &                              Tinfo, rwalk, nudg, track,ifltX)  ! DDMITRY ifltX
+#if defined FLOAT_OIL
+     &                              Tinfo, rwalk, nudg, track,ifltX)  ! DDMITRY
+#else
+     &                              Tinfo, rwalk, nudg, track)  
+#endif
 !***********************************************************************
 !
       USE mod_param
@@ -101,7 +115,9 @@
 !
       integer, intent(in) :: ng, Lstr, Lend
       integer, intent(in) :: nfm3, nfm2, nfm1, nf, nfp1
+#if defined FLOAT_OIL
       integer, intent(in) :: ifltX  ! DDMITRY
+#endif
       logical, intent(in) :: Predictor
 !
 # ifdef ASSUMED_SHAPE
@@ -385,7 +401,7 @@
         END DO
       END IF
 #  elif defined FLOAT_OIL
-! DDMITRY - add oil behavior
+! DDMITRY - add oil buoynat velocity
       IF (Predictor) THEN
         DO l=Lstr,Lend
           IF (my_thread(l).and.bounded(l)) THEN
@@ -399,7 +415,7 @@
      &                                       track(i1oHz,nfm1,l)+       &
      &                                  cff1*track(iwoil,nfm2,l)*       &
      &                                       track(i1oHz,nfm2,l))
-! DDMITRY
+#   if defined OIL_DEBUG
             IF (l.eq.ifltX) then
               print*,'*** vwalk predict izgr=',track(izgrd,nfp1,l)
               print*,'*** vwalk predict z, l=',l,' Predict',Predictor,  &
@@ -409,6 +425,7 @@
      &               'track(iwoil,nfm2)=',track(iwoil,nfm2,l)
             END IF
 ! DD END
+#   endif
           END IF
         END DO
       ELSE
@@ -425,6 +442,7 @@
      &                                       track(i1oHz,nf  ,l)-       &
      &                                  cff3*track(iwoil,nfm1,l)*       &
      &                                       track(i1oHz,nf  ,l))
+#   if defined OIL_DEBUG
 ! DDMITRY
             IF (l.eq.ifltX) then
               print*,'### vwalk correct izgr=',track(izgrd,nfp1,l)
@@ -436,6 +454,7 @@
      &               'track(iwoil,nfm1)=',track(iwoil,nfm1,l)
             END IF
 ! DD END
+#   endif
           END IF
         END DO
       END IF
