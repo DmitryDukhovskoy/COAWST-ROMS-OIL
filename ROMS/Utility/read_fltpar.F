@@ -49,10 +49,12 @@
       real(r8), allocatable :: Ft0(:,:), Fx0(:,:), Fy0(:,:), Fz0(:,:)
       real(r8), allocatable :: Fdt(:,:), Fdx(:,:), Fdy(:,:), Fdz(:,:)
 
+# if defined FLOAT_OIL
 ! DDMITRY
       integer :: Nfrls
-      real(r8) :: Nflt1day, Fdt1day
+      real(r8) :: Nflt1day, Fdt1day, Nflt_tot
 ! END DMITRY
+# endif
       character (len=1  ), parameter :: blank = ' '
 
       character (len=35 ) :: frmt
@@ -91,6 +93,7 @@
               fbionam=TRIM(ADJUSTL(Cval(Nval)))
             CASE ('NFLOATS')
               Npts=load_i(Nval, Rval, Ngrids, Nfloats)
+# if defined FLOAT_OIL
 ! DDMITRY
             CASE ('Nocmp')
               Npts=load_i(Nval, Rval, Ngrids, Nocmp) ! # of oil components
@@ -108,6 +111,7 @@
             CASE ('DfsOil')
               Npts=load_r(Nval,Rval,Ngrids,DfsOil)
 ! END DD
+# endif
             CASE ('POS')
               Npts=Nfloats(1)+1
               IF (Ngrids.gt.1) Npts=MAXVAL(Nfloats)+1
@@ -177,16 +181,20 @@
       RETURN
   30  CONTINUE
 !
+# if defined FLOAT_OIL
 ! DDMITRY
 ! Calculate oil float parameters: Vol of oil in 1 float
 ! Here release frequency Fdt is assumed to be the same = Fdt
 ! for all release locations, will need to be 
 ! modified for spatially varying release frequency
+      ng=1
       Nfrls=nentry(igrid) ! # of floats released at 1 instance
       Fdt1day=Fdt(1,1) 
-      Nflt1day=real(Nfrls)/Fdt1day
+      Nflt1day=REAL(Nfrls)/Fdt1day ! # of floats released in 1 day
       VoilFlt=FlxVoilDay/Nflt1day
+      Nflt_tot=Nflt1day*REAL(ntimes(ng))*dt(ng)/(3600.0*24.0) ! total # floats for the simulation
 ! END DD
+# endif
 !
 !  Turn off the processing of floats if not running long enough to
 !  create a floats file (LdefFLT=.FALSE. because nFLT < ntimes or
@@ -210,15 +218,17 @@
               exit_flag=4
               RETURN
             END IF
+# if defined FLOAT_OIL
 ! DDMITRY
             WRITE (out,85) Nocmp,DoilMn
             WRITE (out,86)
             DO i=1,Nocmp
               WRITE(out,87) i, RhoOilComp(i)
             ENDDO
-            WRITE (out,88) Nfrls, Fdt1day, FlxVoilDay, VoilFlt,         &
-     &                      CWndOil, DfsOil
+            WRITE (out,88) Nfrls, Fdt1day, Nflt_tot, FlxVoilDay,        &
+     &                     VoilFlt, CWndOil, DfsOil
 ! END DD
+# endif
             WRITE (out,90) ng
             DO i=1,nentry(ng)
               IF (.not.spherical.and.(Fcoor(i,ng).eq.0)) THEN
@@ -359,6 +369,7 @@
   70  FORMAT (/,' READ_FltPar - Error while processing line: ',/,a)
   80  FORMAT (/,' READ_FltPar - Inconsistent number of floats to',      &
      &          ' process: ', 2i6,/,18x,'change input script.')
+# if defined FLOAT_OIL
 ! DDMITRY
  85   FORMAT(/,/' OIL FLOATS PARAMETERS',                               &
      &        /,  ' ==================================',/,/,            &
@@ -367,11 +378,13 @@
      &        /,  ' ==================================',/,/)
  87   FORMAT(/,5x,'Comp. ',i2.2,2x,'=',2x,f8.2,1x,'kg/m3')
  88   FORMAT(/,1x, 'Floats Released at 1 time=',i5,2x,                  &
-     &        'Release TStep, day=',f7.5,2x,                            &
-     &        'Oil Vol. Flux =',f8.1,' m3/day',1x,/,                    &
-     &        'Vol.Oil in 1 float=',e12.5,' m3',/,                      &
-     &        'Oil wind coeff=',f6.4,' Oil Diff=',f6.3,' m2/s',/,/)
+     &        'Release TStep, day=',f7.5,/,                             &
+     &        1x,' Total # of floats needed to complete run: ',f8.1,    &
+     &        1x,/,'Oil Vol. Flux =',f8.1,' m3/day',1x,/,               &
+     &        1x,'Vol.Oil in 1 float=',e12.5,' m3',/,                   &
+     &        1x,'Oil wind coeff=',f6.4,' Oil Diff=',f6.3,' m2/s',/,/)
 ! END DD
+# endif
   90  FORMAT (/,/,' Floats Initial Locations, Grid: ',i2.2,             &
      &        /,  ' ==================================',/,/,            &
      &        15x,'Ft0',5x,'Fx0',5x,'Fy0',5x,'Fz0',                     &
