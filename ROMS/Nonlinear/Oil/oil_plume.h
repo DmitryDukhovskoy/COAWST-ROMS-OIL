@@ -1,5 +1,5 @@
       SUBROUTINE oil_param_initialize(ng, Lstr, Lend)
-!***********************************************************************                                              
+!***************************************** DMITRY DUKHOVSKOY ***********                                              
 !
 ! Initialize oil parameters that are not changed during the simulation
 ! 
@@ -123,8 +123,11 @@
 !
       END SUBROUTINE oil_paramini_tile
 
-
+# ifdef OIL_DEBUG
       SUBROUTINE oil_floats (ng, Lstr, Lend, Predictor, my_thread,ifltX)
+# else
+      SUBROUTINE oil_floats (ng, Lstr, Lend, Predictor, my_thread)
+# endif
 !
 !**************************************************  ***
 !***********************************************************************
@@ -145,8 +148,10 @@
 !
 !  Imported variable declarations.
 !
-      integer, intent(in) :: ng, Lstr, Lend, ifltX  ! DDTMIRY ifltX
-
+      integer, intent(in) :: ng, Lstr, Lend
+# ifdef OIL_DEBUG
+      integer, intent(in) :: ifltX
+# endif
       logical, intent(in) :: Predictor
 #ifdef ASSUMED_SHAPE
       logical, intent(in) :: my_thread(Lstr:)
@@ -157,17 +162,21 @@
 #ifdef PROFILE
       CALL wclock_on (ng, iNLM, 10, __LINE__, __FILE__)
 #endif
-      CALL oil_floats_tile (ng, Lstr, Lend,                         &
-     &                      nfm3(ng), nfm2(ng), nfm1(ng), nf(ng),   &
-     &                      nfp1(ng),                               &
-     &                      Predictor, my_thread,                   &
-     &                      DRIFTER(ng) % bounded,                  &
-     &                      DRIFTER(ng) % Tinfo,                    &
-     &                      DRIFTER(ng) % track,                    & 
-     &                      DRIFTER(ng) % frroil0,                   &  ! DDMITRY  ini oil dens components
-     &                      DRIFTER(ng) % wfroil0,                   &  ! DDMITRY  ini oil weight fractions
-     &                      DRIFTER(ng) % szoil0,                    &  ! DDMITRY  ini oil size
-     &                      ifltX)                                     ! DDMITRY
+      CALL oil_floats_tile (ng, Lstr, Lend,                             &
+     &                      nfm3(ng), nfm2(ng), nfm1(ng), nf(ng),       &
+     &                      nfp1(ng),                                   &
+     &                      Predictor, my_thread,                       &
+     &                      DRIFTER(ng) % bounded,                      &
+     &                      DRIFTER(ng) % Tinfo,                        &
+     &                      DRIFTER(ng) % track,                        & 
+     &                      DRIFTER(ng) % frroil0,                      &  ! ini oil dens components
+     &                      DRIFTER(ng) % wfroil0,                      &  ! ini oil weight fractions
+#ifdef OIL_DEBUG
+     &                      DRIFTER(ng) % szoil0,                       &  ! ini oil size
+     &                      ifltX)                                     
+#else
+     &                      DRIFTER(ng) % szoil0)                      ! ini oil size
+#endif
 #ifdef PROFILE
       CALL wclock_off (ng, iNLM, 10, __LINE__, __FILE__)
 #endif
@@ -176,12 +185,16 @@
       END SUBROUTINE oil_floats
 !
 !***********************************************************************
-      SUBROUTINE oil_floats_tile (ng, Lstr, Lend,                   &
-     &                            nfm3, nfm2, nfm1, nf, nfp1,       &
-     &                            Predictor, my_thread, bounded,    &
-     &                            Tinfo, track,                     &
-     &                            frroil0, wfroil0, szoil0,         &  ! DDMITRY
+      SUBROUTINE oil_floats_tile (ng, Lstr, Lend,                       &
+     &                            nfm3, nfm2, nfm1, nf, nfp1,           &
+     &                            Predictor, my_thread, bounded,        &
+     &                            Tinfo, track,                         &
+#ifdef OIL_DEBUG
+     &                            frroil0, wfroil0, szoil0,             &  
      &                            ifltX)     ! DDMITRY
+#else
+     &                            frroil0, wfroil0, szoil0)
+#endif
 !***********************************************************************
       USE mod_param
       USE mod_parallel
@@ -198,7 +211,9 @@
 !
       integer, intent(in) :: ng, Lstr, Lend
       integer, intent(in) :: nfm3, nfm2, nfm1, nf, nfp1
+#ifdef OIL_DEBUG
       integer, intent(in) :: ifltX
+#endif
       logical, intent(in) :: Predictor
 !
 #ifdef ASSUMED_SHAPE
@@ -308,7 +323,7 @@
             frsats=-1.0 ! to initialize oil fractions <0
             frarom=-1.0
             frasph=-1.0
-            CALL oil_density_ini(rhoo,frsats,frarom,frasph,           &
+            CALL oil_density_ini(rhoo,frsats,frarom,frasph,             &
      &                       rsats,rarom,rasph)
             CALL oil_size_ini(Doil)
 !
