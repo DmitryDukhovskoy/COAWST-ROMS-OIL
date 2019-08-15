@@ -17,9 +17,9 @@
 #ifdef PROFILE
       CALL wclock_on (ng, iNLM, 10, __LINE__, __FILE__)
 #endif
-      CALL oil_paramini_tile (ng, Lstr, Lend,                       &
-     &                      DRIFTER(ng) % frroil0,                  &  
-     &                      DRIFTER(ng) % wfroil0,                  &  
+      CALL oil_paramini_tile (ng, Lstr, Lend,                           &
+     &                      DRIFTER(ng) % frroil0,                      &  
+     &                      DRIFTER(ng) % wfroil0,                      &  
      &                      DRIFTER(ng) % szoil0)
 #ifdef PROFILE
       CALL wclock_off (ng, iNLM, 10, __LINE__, __FILE__)
@@ -29,7 +29,7 @@
       END SUBROUTINE oil_param_initialize
 
 !***********************************************************************
-      SUBROUTINE oil_paramini_tile(ng, Lstr, Lend,                   &
+      SUBROUTINE oil_paramini_tile(ng, Lstr, Lend,                      &
      &                            frroil0, wfroil0, szoil0)
 !***********************************************************************
       USE mod_param
@@ -71,7 +71,7 @@
       real(r8) :: frsats, frarom, frasph
       real(r8) :: zoil, tsrfo, rsats, rarom, rasph
 
-      IF (MyRank.eq.MyMaster) print*, & 
+      IF (MyRank.eq.MyMaster) print*,                                   & 
      &    'oil_paramini_tile Lstr=',Lstr,'Lend=',Lend,'MyRank=',MyRank
 
       DO l=Lstr,Lend
@@ -95,10 +95,10 @@
 ! Gamma distribution with mean droplet size = 20 micrometers <-- give very slow woil
 ! Adjusted to mean Doil=300 mcrmeters 
 ! 
-            frsats=-1.0 ! to initialize oil fractions <0
-            frarom=-1.0
-            frasph=-1.0
-            CALL oil_density_ini(rhoo,frsats,frarom,frasph,           &
+            frsats=-1.0_r8 ! to initialize oil fractions <0
+            frarom=-1.0_r8
+            frasph=-1.0_r8
+            CALL oil_density_ini(rhoo,frsats,frarom,frasph,             &
      &                       rsats,rarom,rasph)
             CALL oil_size_ini(Doil)
             frroil0(l,1)=rsats
@@ -482,10 +482,10 @@
             print*,'    '
             IF (Predictor) print*,'####  oil_plume: Predictor step'
             IF (.not.Predictor) print*,'#### oil_plume: Corrector step'
-            print*,'### oil_plume: l=',l, & 
-     &         'T=',temp, 'S=',salt, &
-     &         'RhoWt=',rhowt,'% sats=',frsats,  '% arom=',frarom,  &
-     &         'Doil=',Doil,'RhoOil=',rhoo,'Time Surf=',tsrfo/60.0,    &
+            print*,'### oil_plume: l=',l,                               & 
+     &         'T=',temp, 'S=',salt,                                    &
+     &         'RhoWt=',rhowt,'% sats=',frsats,  '% arom=',frarom,      &
+     &         'Doil=',Doil,'RhoOil=',rhoo,'Time Surf=',tsrfo/60.0,     &
      &         '  woil=',woil 
             print*,'    '
           ENDIF
