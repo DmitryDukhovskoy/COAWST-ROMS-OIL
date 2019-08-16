@@ -187,9 +187,11 @@
       integer :: LBi, UBi, LBj, UBj
       integer :: Ir, Jr, Npts, i, i1, i2, j, j1, j2, itrc, l, k
 ! DDMITRY
-# ifdef FLOAT_OIL
+# if defined FLOAT_OIL 
+#  ifdef OIL_DEBUG
       logical :: ldebug
       integer :: Nopts, ifltB, ifltNB, ifltX, ifltE
+#  endif
 #  if defined BULK_FLUXES || defined BULK_FLUXES2D || defined ATM2OCN_FLUXES 
       integer :: Istr, Iend, Jstr, Jend
 #  endif
@@ -252,7 +254,7 @@
 !  their own tile.
 !
       Npts=NFV(ng)*(NFT+1)*Nfloats(ng)
-# if defined FLOAT_OIL
+# if defined FLOAT_OIL && defined OIL_DEBUG
 ! DDMITRY
       Nopts=Nfloats(ng)*Nocmp
       ifltNB=0
@@ -271,20 +273,20 @@
      &      (Ystr.le.track(iygrd,nf,l)).and.                            &
      &      (track(iygrd,nf,l).lt.Yend)) THEN
           my_thread(l)=.TRUE.
-# if defined FLOAT_OIL
+# if defined FLOAT_OIL && defined OIL_DEBUG
 ! DDMITRY
           ifltB=ifltB+1
 !DD END
 # endif
         ELSE IF (Master.and.(.not.bounded(l))) THEN
           my_thread(l)=.TRUE.
-# if defined FLOAT_OIL
+# if defined FLOAT_OIL && defined OIL_DEBUG
 ! DDMITRY
           ifltNB=ifltNB+1
 !DD END
 # endif
         ELSE
-# if defined FLOAT_OIL
+# if defined FLOAT_OIL && defined OIL_DEBUG
           ifltE=ifltE+1  ! DDMITRY
 #  endif
           DO j=0,NFT
@@ -294,7 +296,7 @@
           END DO
         END IF
       END DO
-
+#  if defined FLOAT_OIL && defined OIL_DEBUG
 ! DDMITRY
 !      IF (ifltB>0 .or. ifltNB>0) THEN      
 !      IF (Master) THEN
@@ -304,6 +306,8 @@
 !      ENDIF
 
 ! DD END
+#  endif
+
 # else
 !
 !-----------------------------------------------------------------------
@@ -365,13 +369,18 @@
 #  endif
 #  if defined FLOAT_OIL
 ! DDMITRY
+#  ifdef OIL_DEBUG
       CALL vwalk_floats (ng, Lstr, Lend, .TRUE., my_thread, nudg, ifltX) 
+#  else
+      CALL vwalk_floats (ng, Lstr, Lend, .TRUE., my_thread, nudg) 
+#  endif
 ! END DD
 #  else
       CALL vwalk_floats (ng, Lstr, Lend, .TRUE., my_thread, nudg)
 #  endif
+
+#  ifdef OIL_DEBUG
 ! DDMITRY
-!#  ifdef OIL_DEBUG
 !      DO l=Lstr,Lend
 !        IF (my_thread(l).and.(l.eq.ifltX)) THEN
 !          print*,'2. Predict. vwalk return: l=',l,'nfp1=',nfp1,  &
@@ -385,8 +394,8 @@
 !          EXIT
 !        ENDIF
 !      ENDDO  
-!#  endif
 ! DD END
+#  endif
 # else
       DO l=Lstr,Lend
         nudg(l)=0.0_r8
@@ -406,10 +415,12 @@
         IF (my_thread(l).and.bounded(l)) THEN
 
           zoil=DRIFTER(ng)%track(idpth,nf,l)
+#   ifdef OIL_DEBUG
 ! Debugging
           ldebug=.FALSE. 
           IF (l.eq.ifltX) ldebug=.TRUE.  
 !          ldebug=.TRUE.
+#   endif
           IF (abs(zoil).le.2.0_r8) THEN
 #   ifdef OIL_DEBUG
             IF (ldebug) THEN
@@ -429,8 +440,12 @@
             CALL wdrift_floats(ng, LBi, UBi, LBj, UBj,                  & 
      &                        Istr, Iend, Jstr, Jend, nf, l,            &
      &                        FORCES(ng) % Uwind,                       & 
-     &                        FORCES(ng) % Vwind,                       & 
+     &                        FORCES(ng) % Vwind,                       &
+#   ifdef OIL_DEBUG 
      &                        DRIFTER(ng) % track, ldebug)
+#   else
+     &                        DRIFTER(ng) % track)
+#   endif
 
           ENDIF
 
@@ -803,6 +818,8 @@
      &                      my_thread, bounded, track)
       END DO
 !
+#   ifdef OIL_DEBUG
+!
 !  Oil behavior predictor step.
 !
 !      DO l=Lstr,Lend
@@ -815,8 +832,9 @@
 !          EXIT
 !        ENDIF
 !      ENDDO  
+#    endif
 !
-# if defined FLOAT_OIL
+# if defined OIL_DEBUG
       CALL oil_floats (ng, Lstr, Lend, .TRUE., my_thread,ifltX)  
 # else
       CALL oil_floats (ng, Lstr, Lend, .TRUE., my_thread)
@@ -1131,6 +1149,7 @@
 #  endif
             END DO
             my_thread(l)=.TRUE.
+#   if defined FLOAT_OIL && defined OIL_DEBUG
 ! DDMITRY
 !            IF (ifltB.gt.0 .and. i.eq.1) THEN
 !              print*,'float Initialized  MyRank',MyRank,' float=', l,   &
@@ -1143,6 +1162,7 @@
 !              ENDDO              
 !            ENDIF
 ! END DD
+#   endif
           ELSE
             my_thread(l)=.FALSE.
             DO j=0,NFT
@@ -1422,7 +1442,7 @@
 !-----------------------------------------------------------------------
 !  Compute oil float behavior, corrector step.
 !-----------------------------------------------------------------------
-!
+#   ifdef OIL_DEBUG
 !      DO l=Lstr,Lend
 !        IF (my_thread(l) .and. l.eq.ifltB) THEN
 !        IF (my_thread(l) .and. l.eq.ifltX) THEN
@@ -1438,8 +1458,13 @@
 !          EXIT
 !        ENDIF
 !      ENDDO  
+#    endif
 
+#   ifdef OIL_DEBUG
       CALL oil_floats (ng, Lstr, Lend, .FALSE., my_thread, ifltX)  
+#   else
+      CALL oil_floats (ng, Lstr, Lend, .FALSE., my_thread)  
+#   endif
 
 #  ifdef OIL_DEBUG
       DO l=Lstr,Lend
@@ -1566,13 +1591,12 @@
           bounded(l)=.FALSE.
         END IF
       END DO
-# if defined FLOAT_OIL && defined OIL_DEBUG
+#  if defined FLOAT_OIL && defined OIL_DEBUG
 ! DDMITRY
       IF (Master) THEN
         print*,'   # of active floats=',NfltA
       ENDIF
 ! END DD
-# endif
 ! DDMITRY
 ! Collect Oil float initial data assigned during new releases
 ! make sure that notinitialized data = Fspv = 0 (or not zero then use different var)
@@ -1586,6 +1610,7 @@
 !      CALL mp_collect(ng,iNLM,Nopts,Fspv,FwrkWoil)
 !      wfroil0=RESHAPE(FwrkWoil,(/Nfloats(ng),Nocmp/))
 ! DD END
+#  endif
 # endif
       RETURN
       END SUBROUTINE step_floats_tile

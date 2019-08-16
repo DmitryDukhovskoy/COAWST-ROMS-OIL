@@ -3867,6 +3867,7 @@
 !
 !  Local variable declarations.
 !
+      integer, parameter :: ispval=99999999
 # ifdef MASKING
       logical :: LandFill
 # endif
@@ -4021,7 +4022,7 @@
           DO i=Imin,Imax
             np=np+1
             IF (Amask(i,j).eq.0.0_r8) THEN
-              Asend(np)=nint(spval)
+              Asend(np)=ispval
             END IF
           END DO
         END DO
@@ -4031,7 +4032,7 @@
           DO i=Imin,Imax
             np=np+1
             IF (Amask(i,j).eq.0.0_r8) THEN
-              Asend(np)=nint(spval)
+              Asend(np)=ispval
             END IF
           END DO
         END DO
@@ -4109,7 +4110,7 @@
         ic=0
         np=Ilen*Jlen
         DO i=1,np
-          IF (Awrk(i).lt.nint(spval)) THEN
+          IF (Awrk(i).lt.ispval) THEN
             ic=ic+1
             Awrk(ic)=Awrk(i)
           END IF
@@ -4199,6 +4200,7 @@
 !
 !  Local variable declarations.
 !
+      integer, parameter :: ispval=99999999
 # ifdef MASKING
       logical :: LandFill
 # endif
@@ -4365,7 +4367,7 @@
             DO i=Imin,Imax
               np=np+1
               IF (Amask(i,j).eq.0.0_r8) THEN
-                Asend(np)=nint(spval)
+                Asend(np)=ispval
               END IF
             END DO
           END DO
@@ -4377,7 +4379,7 @@
             DO i=Imin,Imax
               np=np+1
               IF (Amask(i,j).eq.0.0_r8) THEN
-                Asend(np)=nint(spval)
+                Asend(np)=ispval
               END IF
             END DO
           END DO
@@ -4463,7 +4465,7 @@
         ic=0
         np=IJlen*Klen
         DO i=1,np
-          IF (Awrk(i).lt.nint(spval)) THEN
+          IF (Awrk(i).lt.ispval) THEN
             ic=ic+1
             Awrk(ic)=Awrk(i)
           END IF
