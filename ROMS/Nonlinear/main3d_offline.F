@@ -2,7 +2,7 @@
 #if defined NONLINEAR && defined SOLVE3D && (defined OFFLINE)
       SUBROUTINE main3d_offline (RunInterval)
 !
-!svn $Id$
+!svn $Id$: main3d_offline.F 830 2017-01-24 21:21:11Z arango $
 !=======================================================================
 !  Copyright (c) 2002-2016 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
@@ -114,6 +114,7 @@
       USE step_floats_mod, ONLY : step_floats
 # endif
       USE wvelocity_mod, ONLY : wvelocity
+      USE dateclock_mod, ONLY : time_string
 !
       implicit none
 !
@@ -208,9 +209,9 @@
 !
         DO ng=1,Ngrids
           DO tile=first_tile(ng),last_tile(ng),+1
-            CALL set_massflux (ng, tile)
+            CALL set_massflux (ng, tile, iNLM)
 # ifndef TS_FIXED
-            CALL rho_eos (ng, tile)
+            CALL rho_eos (ng, tile, iNLM)
 # endif
             CALL diag (ng, tile)
           END DO
@@ -259,16 +260,17 @@
 # ifdef NESTING
         CALL nesting (9)
 # endif
+
+#  if defined ICE_MODEL
 !
 !-----------------------------------------------------------------------
 !  Run ice model for one step
 !-----------------------------------------------------------------------
 !
         DO ng=1,Ngrids
-#  if defined ICE_MODEL
           CALL seaice(ng)
-#  endif
         END DO
+#  endif
 # endif
 !
 !-----------------------------------------------------------------------
@@ -292,10 +294,9 @@
             CALL hmixing (ng, tile)
 # endif
 # if !defined OCLIMATOLOGY
-            CALL omega (ng, tile)
+            CALL omega (ng, tile, iNLM)
 # endif
             CALL wvelocity (ng, tile, nstp(ng))
-            END DO
           END DO
 !$OMP BARRIER
         END DO
@@ -370,7 +371,7 @@
 !
         DO ng=1,Ngrids
           DO tile=first_tile(ng),last_tile(ng),+1
-            CALL omega (ng, tile)
+            CALL omega (ng, tile, iNLM)
 # ifdef MY25_MIXING
             CALL my25_corstep (ng, tile)
 # elif defined GLS_MIXING
@@ -452,4 +453,3 @@
       RETURN
       END SUBROUTINE main3d_offline
 #endif
- 
