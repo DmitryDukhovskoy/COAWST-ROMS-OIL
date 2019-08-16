@@ -54,7 +54,11 @@
       SUBROUTINE wdrift_floats (ng, LBi, UBi, LBj, UBj,                 &
      &                          Istr, Iend, Jstr, Jend,                 &
      &                          nfindx, l,                              &
+# ifdef OIL_DEBUG
      &                          Uwind, Vwind, track, ldebug)  
+# else
+     &                          Uwind, Vwind, track)  
+# endif
 !***********************************************************************
 !
       USE mod_param
@@ -80,8 +84,10 @@
 !      integer, intent(in) :: IminS, ImaxS, JminS, JmaxS
       integer, intent(in) :: Istr, Iend, Jstr, Jend 
       integer, intent(in) :: nfindx
+# ifdef OIL_DEBUG
       logical, intent(in) :: ldebug  ! float # to report in log
 !      logical, intent(in) :: Predictor
+# endif
 !
 # ifdef ASSUMED_SHAPE
 !      logical, intent(in) :: bounded(:)

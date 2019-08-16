@@ -30,7 +30,7 @@
 !
 !***********************************************************************
       SUBROUTINE vwalk_floats (ng, Lstr, Lend, Predictor,               &
-#if defined FLOAT_OIL
+#if defined FLOAT_OIL && defined OIL_DEBUG
      &                         my_thread, nudg,ifltX) ! DDMITRY
 # else
      &                         my_thread, nudg) 
@@ -44,7 +44,7 @@
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, Lstr, Lend
-#if defined FLOAT_OIL
+#if defined FLOAT_OIL && defined OIL_DEBUG
       integer, intent(in) :: ifltX  ! DDMITRY
 #endif
       logical, intent(in) :: Predictor
@@ -70,7 +70,7 @@
      &                        DRIFTER(ng) % Tinfo,                      &
      &                        DRIFTER(ng) % rwalk,                      &
      &                        nudg,                                     &
-#if defined FLOAT_OIL
+#if defined FLOAT_OIL && defined OIL_DEBUG
      &                        DRIFTER(ng) % track,                      &
      &                        ifltX) ! DDMITRY
 #else
@@ -89,7 +89,7 @@
       SUBROUTINE vwalk_floats_tile (ng, Lstr, Lend,                     &
      &                              nfm3, nfm2, nfm1, nf, nfp1,         &
      &                              Predictor, my_thread, bounded,      &
-#if defined FLOAT_OIL
+#if defined FLOAT_OIL && defined OIL_DEBUG
      &                              Tinfo, rwalk, nudg, track,ifltX)  ! DDMITRY
 #else
      &                              Tinfo, rwalk, nudg, track)  
@@ -115,7 +115,7 @@
 !
       integer, intent(in) :: ng, Lstr, Lend
       integer, intent(in) :: nfm3, nfm2, nfm1, nf, nfp1
-#if defined FLOAT_OIL
+#if defined FLOAT_OIL && defined OIL_DEBUG
       integer, intent(in) :: ifltX  ! DDMITRY
 #endif
       logical, intent(in) :: Predictor
@@ -231,6 +231,7 @@
         ELSE
           nudg(l)=0.0_r8
         END IF
+# if defined FLOAT_OIL && defined OIL_DEBUG
 ! DDMITRY
 !        IF (l.eq.ifltX) THEN
 !          print*,'>> vwalk_floats: l=',l,'MyRank=',MyRank, &
@@ -238,6 +239,7 @@
 !     &           'rwalk=',rwalk(l),'Diffus=',track(ifakt,nfindx,l)
 !        ENDIF
 ! END DD
+# endif
       END DO
 
 # ifdef DIAPAUSE
