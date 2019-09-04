@@ -393,7 +393,7 @@
 #  endif
 # endif
 ! DDMITRY
-#if defined FLOAT_OIL && defined OIL_DEBUG
+#if defined FLOAT_OIL && defined OIL_EULR && defined OIL_DEBUG
       USE metrics_oil_mod, ONLY : metrics_oil
 #endif
 ! END DD

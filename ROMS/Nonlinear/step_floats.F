@@ -73,13 +73,6 @@
 # if defined SOLVE3D && defined FLOAT_STICKY
      &                       DRIFTER(ng) % stuck,                       &
 # endif
-! DDMITRY
-# ifdef FLOAT_OIL
-     &                      DRIFTER(ng) % frroil0,                      &  ! ini oil dens components 
-     &                      DRIFTER(ng) % wfroil0,                      &  ! ini oil weight fractions
-     &                      DRIFTER(ng) % szoil0,                       &  ! ini oil size     
-# endif
-! END DD
      &                       DRIFTER(ng) % track)
 # ifdef PROFILE
       CALL wclock_off (ng, iNLM, 10, __LINE__, __FILE__)
@@ -94,9 +87,6 @@
      &                             bounded, Ftype, Tinfo, Fz0,          &
 # if defined SOLVE3D && defined FLOAT_STICKY
      &                             stuck,                               &
-# endif
-# ifdef FLOAT_OIL
-     &                             frroil0, wfroil0, szoil0,            & ! DDMITRY
 # endif
      &                             track)
 !***********************************************************************
@@ -147,13 +137,6 @@
 #  if defined SOLVE3D && defined FLOAT_STICKY
       logical, intent(inout) :: stuck(:)
 #  endif
-! DDMITRY
-# ifdef FLOAT_OIL
-      real(r8), intent(inout) :: frroil0(:,:)  ! DDMITRY
-      real(r8), intent(inout) :: wfroil0(:,:)  ! DDMITRY
-      real(r8), intent(inout) :: szoil0(:)     ! DDMITRY
-# endif
-! DD END
       real(r8), intent(inout) :: track(:,0:,:)
 # else
       integer, intent(in) :: Ftype(Nfloats(ng))
@@ -164,13 +147,6 @@
 #  if defined SOLVE3D && defined FLOAT_STICKY
       logical, intent(inout) :: stuck(Nfloats(ng))
 #  endif
-! DDMITRY
-# ifdef FLOAT_OIL
-      real(r8), intent(inout) :: frroil0(Nfloats(ng),Nocmp) 
-      real(r8), intent(inout) :: wfroil0(Nfloats(ng),Nocmp) 
-      real(r8), intent(inout) :: szoil0(Nfloats(ng))    
-# endif
-! DD END
       real(r8), intent(inout) :: track(NFV(ng),0:NFT,Nfloats(ng))
 # endif
 !
@@ -347,9 +323,10 @@
 !
 #  ifdef OIL_DEBUG
 ! DDMITRY
-      ifltX=0
-      DO l=Lstr,Lend
-        IF (my_thread(l).and.bounded(l)) THEN
+      ifltX=12101
+!      ifltx=0
+!      DO l=Lstr,Lend
+!        IF (my_thread(l).and.bounded(l)) THEN
 !          print*,'Step Floats: 1. Predict.calling vwalk: l=',l,         & 
 !     &               ' Time=',time(ng),', release t=',Tinfo(itstr,l),   &
 !     &               'xgrd=',track(ixgrd,nf,l),                         &
@@ -361,10 +338,10 @@
 !     &               'zslp=',track(izrhs,nf,l),                         &
 !     &               'diffusiv=',track(ifakt,nf,l),                     &
 !     &               'dAkt/ds=',track(ifdak,nf,l)
-          ifltX=l
-          EXIT
-        ENDIF
-      ENDDO  
+!          ifltX=l
+!          EXIT
+!        ENDIF
+!      ENDDO  
 ! DD END
 #  endif
 #  if defined FLOAT_OIL
@@ -1597,19 +1574,6 @@
         print*,'   # of active floats=',NfltA
       ENDIF
 ! END DD
-! DDMITRY
-! Collect Oil float initial data assigned during new releases
-! make sure that notinitialized data = Fspv = 0 (or not zero then use different var)
-!      FwrkRoil=RESHAPE(frroil0,(/Nopts/))
-!      CALL mp_collect(ng,iNLM,Nopts,Fspv,FwrkRoil)
-!      frroil0=RESHAPE(FwrkRoil,(/Nfloats(ng),Nocmp/))
-!
-!      CALL mp_collect(ng,iNLM,Nfloats(ng),Fspv,szoil0)
-!
-!      FwrkWoil=RESHAPE(wfroil0,(/Nopts/))
-!      CALL mp_collect(ng,iNLM,Nopts,Fspv,FwrkWoil)
-!      wfroil0=RESHAPE(FwrkWoil,(/Nfloats(ng),Nocmp/))
-! DD END
 #  endif
 # endif
       RETURN
