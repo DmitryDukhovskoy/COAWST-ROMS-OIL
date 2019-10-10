@@ -107,8 +107,8 @@ GridsInLayer =  1
 ! shared-memory configurations used to determine tile horizontal range
 ! indices (Istr,Iend) and (Jstr,Jend), [1:Ngrids].
 
-      NtileI == 8                               ! I-direction partition
-      NtileJ == 4                               ! J-direction partition
+      NtileI == 12                              ! I-direction partition
+      NtileJ == 6                               ! J-direction partition
 
 ! Set lateral boundary conditions keyword. Notice that a value is expected
 ! for each boundary segment per nested grid for each state variable.
@@ -217,7 +217,7 @@ ad_VolCons(north) ==  F                            ! northern boundary
 
 ! Time-Stepping parameters.
 
-      NTIMES == 86400  
+      NTIMES == 129600  
           DT == 20.0d0  
      NDTFAST == 15     
 
@@ -245,7 +245,7 @@ ad_VolCons(north) ==  F                            ! northern boundary
 !       NRST ==  8640   120
 		
         NSTA == 1    1
-        NFLT == 2160    1
+        NFLT == 180    1
        NINFO == 1    1
 
 ! Output history, average, diagnostic files parameters.

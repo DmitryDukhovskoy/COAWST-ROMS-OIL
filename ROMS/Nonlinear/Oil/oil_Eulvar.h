@@ -13,6 +13,9 @@
 !         Coil(:,:,:,1:Nocmp) => Oil content/conc by oil components    !
 !         Coil = Mass oil/Vgrid by oil components                      !
 !                                                                      !
+!  COil0 - Oil concentration field before bio/sedimentation            !
+!          Needed for mapping back to Lagrangian frame                 !
+!                                                                      !
 !  Doil - Average Oil droplet size in 3D grid cells                    !
 !                                                                      !
 !  NFLT3D - Number of oil Lagr. floats in 3D grid cells                !
@@ -31,6 +34,7 @@
 ! Mean droplet size
 !
       real(r8), pointer :: Coil(:,:,:,:)
+      real(r8), pointer :: Coil0(:,:,:,:)
       real(r8), pointer :: Doil(:,:,:)
       integer, pointer :: NFLT3D(:,:,:)
 !
@@ -64,6 +68,7 @@
       IF (ng.eq.1) allocate ( OIL3D(Ngrids) )
 !
       allocate ( OIL3D(ng) % Coil(LBi:UBi,LBj:UBj,N(ng),Nocmp) )
+      allocate ( OIL3D(ng) % Coil0(LBi:UBi,LBj:UBj,N(ng),Nocmp) )
       allocate ( OIL3D(ng) % Doil(LBi:UBi,LBj:UBj,N(ng)) )
       allocate ( OIL3D(ng) % NFLT3D(LBi:UBi,LBj:UBj,N(ng)) ) 
 !
@@ -149,6 +154,7 @@
             DO j=Jmin,Jmax
               DO i=Imin,Imax
                 OIL3D(ng) % Coil(i,j,k,itrc) = IniVal
+                OIL3D(ng) % Coil0(i,j,k,itrc) = IniVal
               ENDDO
             ENDDO
           ENDDO
@@ -157,7 +163,7 @@
           DO j=Jmin,Jmax
             DO i=Imin,Imax
               OIL3D(ng) % Doil(i,j,k) = IniVal
-              OIL3D(ng) % NFLT3D(i,j,k) = -1
+              OIL3D(ng) % NFLT3D(i,j,k) = 0
             ENDDO
           ENDDO
         ENDDO

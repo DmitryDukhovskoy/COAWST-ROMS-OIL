@@ -12,7 +12,7 @@
       implicit none
 
       PRIVATE
-      PUBLIC  :: oil_floats, oil_param_initialize
+      PUBLIC  :: oil_floats, oil_param_initialize, oil_density
 
       CONTAINS
 

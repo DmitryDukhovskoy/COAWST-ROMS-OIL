@@ -27,7 +27,10 @@
 !               reflected and floats that hitthe bottom get stick      !
 # endif
 # ifdef FLOAT_OIL
-!  frroil0     Initial oil density by components                       ! DDMITRY
+!  ROilCmp     Densities of oil componenets provided in input file     ! DDMITRY
+!              These densities do not change in time, however          !
+!             changing weight fractions of oil components impacts      !
+!             the overall density of oil particles                     !
 !             n components is  = Nocmp 
 !            currently: (saturates, aromatics, res+asph                !
 !             (rho1, rho2,rho3)                                        !
@@ -69,7 +72,7 @@
           real(r8), pointer :: rwalk(:)
 # endif
 # ifdef FLOAT_OIL
-          real(r8), pointer :: frroil0(:,:) ! DDMITRY
+          real(r8), pointer :: ROilCmp(:,:) ! DDMITRY
           real(r8), pointer :: wfroil0(:,:) ! DDMITRY
           real(r8), pointer :: szoil0(:)    ! DDMITRY
 # endif
@@ -115,8 +118,8 @@
         integer, parameter :: ifdak = 16         ! d(Akt)/d(s)
 #  endif
 # endif
-! DDMITRY - ADD OIL FLOAT parameters - also need to change mod_param.F NFV
 # ifdef FLOAT_OIL
+! DDMITRY - ADD OIL FLOAT parameters - also need to change mod_param.F NFV
 #  ifdef FLOAT_VWALK
         integer, parameter :: i1oHz = 13         ! 1/Hz
         integer, parameter :: iroil = 14         ! oil density
@@ -138,8 +141,8 @@
         integer, parameter :: ixwnd = 18         ! surf wind at oil location, u comp
         integer, parameter :: iywnd = 19         ! surf wind at oil location, v comp
 #  endif
-# endif
 ! DD END
+# endif
 # ifdef FLOAT_OYSTER
 #  ifdef FLOAT_VWALK
         integer, parameter :: i1oHz = 13         ! 1/Hz
@@ -263,7 +266,7 @@
           allocate ( DRIFTER(ng) % rwalk(Nfloats(ng)) )
 # endif
 # ifdef FLOAT_OIL
-          allocate ( DRIFTER(ng) % frroil0(Nfloats(ng),Nocmp) ) ! DDMITRY
+          allocate ( DRIFTER(ng) % ROilCmp(Nfloats(ng),Nocmp) ) ! DDMITRY
           allocate ( DRIFTER(ng) % wfroil0(Nfloats(ng),Nocmp) ) ! DDMITRY
           allocate ( DRIFTER(ng) % szoil0(Nfloats(ng)) )        ! DDMITRY
 # endif
@@ -312,7 +315,7 @@
 !            ENDIF
  
             DO i=1,Nocmp
-              DRIFTER(ng) % frroil0(iflt,i) = 0.0_r8 
+              DRIFTER(ng) % ROilCmp(iflt,i) = 0.0_r8 
               DRIFTER(ng) % wfroil0(iflt,i) = 0.0_r8
             ENDDO
             DRIFTER(ng) % szoil0(iflt) = 0.0_r8 
