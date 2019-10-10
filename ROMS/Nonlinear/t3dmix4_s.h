@@ -230,6 +230,8 @@
 #ifdef OFFLINE_BIOLOGY
       DO ibt=1,NBT
         itrc=idbio(ibt)
+#elif defined OFFLINE_TPASSIVE
+      DO itrc=NAT+1,NAT+NPT
 #else
       DO itrc=1,NT(ng)
 #endif
