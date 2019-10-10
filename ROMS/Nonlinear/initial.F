@@ -568,7 +568,8 @@
       END DO
 #endif
 
-#ifndef OFFLINE_FLOATS
+! Commented out by Lixin
+!#ifndef OFFLINE_FLOATS
 #ifdef INI_FILE
 !
 !  Read in initial conditions from initial NetCDF file.
@@ -776,7 +777,8 @@
 !$OMP BARRIER
       END DO
 #endif
-#endif /* !OFFLINE_FLOATS */
+! Commented out by Lixin
+!#endif /* !OFFLINE_FLOATS */
 
 #if defined FOUR_DVAR || !defined TANGENT || !defined ADJOINT
 !

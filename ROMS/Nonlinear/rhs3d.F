@@ -128,7 +128,7 @@
       CALL vegetation_drag_cal (ng, tile)
 # endif
 
-# if !defined OFFLINE_BIOLOGY
+# if !defined OFFLINE_BIOLOGY && !defined OFFLINE_TPASSIVE
 !
 !-----------------------------------------------------------------------
 !  Compute right-hand-side terms for the 3D momentum equations.
