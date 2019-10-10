@@ -109,10 +109,12 @@
 #undef FORWARD_MIXING
 
 #define FLOATS
-#define FLOAT_OIL
 #define FLOAT_VWALK
+#define FLOAT_OIL
 #undef WOIL_INTEGRATED
-#define OIL_DEBUG
+#undef OIL_DEBUG
+#undef OIL_MAP_DEBUG
+#define OIL_BIO
 #define OIL_EULR
 /*
 **-----------------------------------------------------------------------------

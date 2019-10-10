@@ -27,7 +27,7 @@
       USE mod_floats
       USE mod_scalars
       USE mod_grid
-      USE mod_stepping
+!      USE mod_stepping
       USE mod_oil_Eulvar
 !
 !  Imported variable declarations.
@@ -44,13 +44,14 @@
      &                     OIL3D(ng) % Coil,                            &
      &                     OIL3D(ng) % Doil,                            &
      &                     OIL3D(ng) % NFLT3D,                          &
-     &                     nf(ng),                                      &
      &                     DRIFTER(ng) % track,                         &
      &                     DRIFTER(ng) % bounded,                       &
      &                     GRID(ng) % omn,                              &
      &                     GRID(ng) % Hz,                               &
      &                     GRID(ng) % z_r,                              & 
      &                     GRID(ng) % z_w)
+
+      OIL3D(ng) % Coil0 = OIL3D(ng) % Coil
 
       RETURN
       END SUBROUTINE lagr2euler
@@ -60,8 +61,8 @@
       SUBROUTINE lagr2euler_tile(ng, tile, Lstr, Lend,                  &
      &                           LBi, UBi, LBj, UBj,                    &
      &                           IminS, ImaxS, JminS, JmaxS,            &
-     &                           Coil, Doil, NFLT3D, nftm,              &
-     &                           track, bounded, omn, Hz, z_r, z_w)
+     &                           Coil, Doil, NFLT3D, track,             &
+     &                           bounded, omn, Hz, z_r, z_w)
 !***********************************************************************
 !
       USE mod_param
@@ -69,13 +70,14 @@
       USE mod_scalars
       USE mod_grid
       USE mod_parallel
+      USE mod_stepping
 
       implicit none
 
 !
 !  Imported variable declarations
 !
-      integer, intent(in) :: ng, tile, Lstr, Lend, nftm
+      integer, intent(in) :: ng, tile, Lstr, Lend
       integer, intent(in) :: LBi, UBi, LBj, UBj
       integer, intent(in) :: IminS, ImaxS, JminS, JmaxS
 #ifdef ASSUMED_SHAPE
@@ -133,7 +135,7 @@
       Coil=0.0_r8
       Doil=0.0_r8
 
-!# ifdef OIL_DEBUG      
+!# ifdef OIL_MAP_DEBUG      
 !      IF (MyRank.eq.MyMaster) THEN
 !        print*,'My Rank =', MyRank, 'tile=',tile
 !        print*,'map_Lagr2Euler.F: LBi=',LBi,' UBi=',UBi,                &
@@ -165,19 +167,19 @@
       mxNflt=0
       DO l=Lstr,Lend
         my_thread(l)=.FALSE.
-        IF ((Xstr.le.track(ixgrd,nftm,l)).and.                          &
-     &      (track(ixgrd,nftm,l).lt.Xend).and.                          &
-     &      (Ystr.le.track(iygrd,nftm,l)).and.                          &
-     &      (track(iygrd,nftm,l).lt.Yend)) THEN
+        IF ((Xstr.le.track(ixgrd,nfp1(ng),l)).and.                      &
+     &      (track(ixgrd,nfp1(ng),l).lt.Xend).and.                      &
+     &      (Ystr.le.track(iygrd,nfp1(ng),l)).and.                      &
+     &      (track(iygrd,nfp1(ng),l).lt.Yend)) THEN
           my_thread(l)=.TRUE.
         ELSE
           CYCLE
         ENDIF
 
         IF (my_thread(l).and.bounded(l)) THEN
-          xflt=track(ixgrd,nftm,l)
-          yflt=track(iygrd,nftm,l)
-          zflt=track(izgrd,nftm,l)
+          xflt=track(ixgrd,nfp1(ng),l)
+          yflt=track(iygrd,nfp1(ng),l)
+          zflt=track(izgrd,nfp1(ng),l)
           mxNflt=mxNflt+1
 !
           i=nint(xflt)
@@ -191,16 +193,10 @@
           IF (j.gt.BOUNDS(ng)%Jend(MyRank)) j=BOUNDS(ng)%Jend(MyRank)
 
           NFLT3D(i,j,k)=NFLT3D(i,j,k)+1
-          Doil(i,j,k)=Doil(i,j,k)+track(isizo,nftm,l)
-          rhoo=track(iroil,nftm,l)
-          mxDoil_lgr=max(mxDoil_lgr,track(isizo,nftm,l))
+          Doil(i,j,k)=Doil(i,j,k)+track(isizo,nfp1(ng),l)
+          rhoo=track(iroil,nfp1(ng),l)
+          mxDoil_lgr=max(mxDoil_lgr,track(isizo,nfp1(ng),l))
 
-!        print*,'++++++++++++++++  N floats MyRank',MyRank,              &
-!     &         'NFLT3D=',NFLT3D(i,j,k)
-!        print*,'i=',i,'j=',j,'k=',k,'Float=',l
-!        print*,'Lagr: i,j,k=',xflt,yflt,zflt
-!        print*,'Lagr: x=',track(iflon,nftm,l),'y=',track(iflat,nftm,l), &
-!     &         'z=',track(idpth,nftm,l)
 !     
 !     This part of the code will need to be modified 
 !     if varying Nocmp = # of oil components (fractions) is needed
@@ -209,8 +205,8 @@
 !     with oil_plume.h and Modules/mod_floats.F
 !     
 !     Weight fraction of oil components SAR+A:
-          wfroil(1)=track(isats,nftm,l)
-          wfroil(2)=track(iarom,nftm,l)
+          wfroil(1)=track(isats,nfp1(ng),l)
+          wfroil(2)=track(iarom,nfp1(ng),l)
           wfroil(3)=1.0_r8-(wfroil(1)+wfroil(2))
 
 !     Oil mass in grd cell by components
@@ -219,10 +215,10 @@
      &                         VoilFlt*rhoo*wfroil(ic)
           ENDDO
 
-!#if defined OIL_DEBUG
+!#if defined OIL_MAP_DEBUG
 !          IF (i.eq.141 .and. j.eq.79 .and. k.eq.4) THEN
 !            print*,'### i,j,k: ',i,j,k, 'NFLT=',NFLT3D(i,j,k),          &
-!     &           ' Doil=',Doil(i,j,k),'Lagr Doil=',track(isizo,nftm,l)
+!     &           ' Doil=',Doil(i,j,k),'Lagr Doil=',track(isizo,nfp1(ng),l)
 !            print*,'### Moil1=',MoilGrd(i,j,k,1),' rhoo=',rhoo,         &
 !     &          'wfroil=',wfroil(1)
 !            print*,'### Moil2=',MoilGrd(i,j,k,2),' rhoo=',rhoo,         &
@@ -235,7 +231,7 @@
         ENDIF
       ENDDO
 
-!# ifdef OIL_DEBUG      
+!# ifdef OIL_MAP_DEBUG      
 !      IF (MyRank.eq.MyMaster) THEN
 !      IF (lchck .and. maxval(NFLT3D)>0) THEN
 !        print*,'My Rank =', MyRank, 'maxNFLT=',maxval(NFLT3D)
@@ -265,7 +261,7 @@
               Coil(i,j,k,ic)=MoilGrd(i,j,k,ic)/GrdVol(i,j,k)
             ENDDO
 !
-            IF (NFLT3D(i,j,k).ge.1000 .or. mxDoil.gt.mxDoil_lgr) THEN
+            IF (NFLT3D(i,j,k).ge.1000 .or. mxDoil.gt.mxDoil_lgr) THEN ! mxDoil (cell mean) should be <= mxDoil_lgr 
               print*,'*** ERR  My rank',MyRank,                         &
      &               'nfgrd=',nfgrd
               print*,'i=',i,'j=',j,'k=',k,'Nflts=',nfgrd
@@ -278,9 +274,9 @@
         ENDDO
       ENDDO
 
-#ifdef OIL_DEBUG
-      IF (sumFlt>0) THEN
-        print*,'lagr2euler_tile end, Eulr MaxDoil=',mxDoil,             &
+#ifdef OIL_MAP_DEBUG
+      IF (sumFlt>0 .and. mxDoil.gt.1.0e-1) THEN  
+        print*,'lagr2euler_tile end, CHECK: Eulr MaxDoil=',mxDoil,      &
      &         'Lagr MaxDoil=',mxDoil_lgr, 'Eulr # Floats=',sumFlt,     &
      &         'Lagr # Floats=',mxNflt
       ENDIF

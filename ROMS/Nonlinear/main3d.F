@@ -165,6 +165,10 @@
 ! DDMITRY
       USE lagr2euler_mod
       USE metrics_oil_mod
+      USE euler2lagr_mod  ! later, use only if defined biology or sediment
+#   ifdef OIL_BIO
+      USE bio_oil_mod
+#   endif
 ! END DD
 # endif
       USE strings_mod,          ONLY : FoundError
@@ -1002,12 +1006,13 @@
                 Lend=Nfloats(ng)
 #  endif
                 CALL step_floats (ng, Lstr, Lend)
+
+#  if defined FLOAT_OIL && defined OIL_EULR
 ! DDMITRY 
 ! Map Lagrangian -> Euler oil floats for biology/sediments modules
 ! model=iNLM nonlinear model assumed for now
-#  if defined FLOAT_OIL && defined OIL_EULR
                 DO tile=last_tile(ng),first_tile(ng),-1
-#   ifdef OIL_DEBUG
+#   ifdef OIL_MAP_DEBUG
                   IF (Master) THEN
                      print*,'   ^^^^^^^^^^^^ TILE= ',tile
                      print*,'Calling lagr2euler'
@@ -1015,7 +1020,7 @@
                    ENDIF                 
 #   endif
                    CALL lagr2euler (ng, tile, Lstr, Lend)
-#   ifdef OIL_DEBUG
+#   ifdef OIL_MAP_DEBUG
                    IF (Master) THEN
                      CALL CPU_TIME(Tfinish)
 !                     print*,'lagr2euler done: '
@@ -1029,8 +1034,37 @@
                      CALL metrics_oil (ng, tile, iNLM, Lstr, Lend)
                    ENDIF
                  ENDDO  ! tile
-#  endif
+!
+!  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+!  Here: CALL BIOLOGY
+#   ifdef OIL_BIO
+                 CALL bio_degradation(ng, tile)
+#   endif    
+!        CALL SEDIMENTS
+!  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+!
+!  Here: Update Oil state in Lagr frame
+                 DO tile=last_tile(ng), first_tile(ng),-1
+#   ifdef OIL_MAP_DEBUG
+                  IF (Master) THEN
+                     print*,' =========  Calling euler2lagr ====='
+                     CALL CPU_TIME(Tstart)
+                   ENDIF                 
+#   endif
+!
+                 CALL euler2lagr(ng, tile, Lstr, Lend)
+!
+#   ifdef OIL_MAP_DEBUG
+                   IF (Master) THEN
+                     CALL CPU_TIME(Tfinish)
+                     print '("======  euler2lagr done, CPU Time: ",     &
+     &                       f8.6," sec")',Tfinish-Tstart
+                     print*,'   '
+                   ENDIF                
+                 ENDDO  ! tile 
+#   endif
 ! END DDMITRY
+#  endif
 !
 !$OMP BARRIER
 !

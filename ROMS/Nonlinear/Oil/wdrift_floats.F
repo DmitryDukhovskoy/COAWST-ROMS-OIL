@@ -140,15 +140,6 @@
 !  Compute wind drift and adjust oil float position
 !-----------------------------------------------------------------------
 !
-!      DO j=Jstr,Jend
-!        DO i=Istr,Iend
-!          w10=sqrt(Uwind(i,j)*Uwind(i,j)+Vwind(i,j)*Vwind(i,j))
-!          theta=-25.0_r8*exp(-1.0e-8_r8*w10**3/(9.8_r8*nuk))
-!          theta=theta*pi/180.0_r8
-!          Udrft(i,j)=Cwnd*(cos(theta)*Uwind(i,j)-sin(theta)*Vwind(i,j)) ! rotate by theta angle and scale by Cwnd
-!          Vdrft(i,j)=Cwnd*(sin(theta)*Uwind(i,j)+cos(theta)*Vwind(i,j))
-!        ENDDO
-!      ENDDO
 
 ! Interpolate wind into float position
       Ir=FLOOR(track(ixgrd,nfindx,l))

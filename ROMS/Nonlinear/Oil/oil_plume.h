@@ -18,7 +18,7 @@
       CALL wclock_on (ng, iNLM, 10, __LINE__, __FILE__)
 #endif
       CALL oil_paramini_tile (ng, Lstr, Lend,                           &
-     &                      DRIFTER(ng) % frroil0,                      &  
+     &                      DRIFTER(ng) % ROilCmp,                      &  
      &                      DRIFTER(ng) % wfroil0,                      &  
      &                      DRIFTER(ng) % szoil0)
 #ifdef PROFILE
@@ -30,13 +30,11 @@
 
 !***********************************************************************
       SUBROUTINE oil_paramini_tile(ng, Lstr, Lend,                      &
-     &                            frroil0, wfroil0, szoil0)
+     &                            ROilCmp, wfroil0, szoil0)
 !***********************************************************************
       USE mod_param
       USE mod_parallel
       USE mod_floats
-!      USE mod_grid
-!      USE mod_iounits
       USE mod_scalars
 # ifdef DISTRIBUTE
       USE distribute_mod, ONLY: mp_bcastf
@@ -47,11 +45,11 @@
       integer, intent(in) :: ng, Lstr, Lend
 !
 #ifdef ASSUMED_SHAPE
-      real(r8), intent(inout) :: frroil0(:,:)  
+      real(r8), intent(inout) :: ROilCmp(:,:)  
       real(r8), intent(inout) :: wfroil0(:,:)  
       real(r8), intent(inout) :: szoil0(:)     
 #else
-      real(r8), intent(inout) :: frroil0(Nfloats(ng),Nocmp)  
+      real(r8), intent(inout) :: ROilCmp(Nfloats(ng),Nocmp)  
       real(r8), intent(inout) :: wfroil0(Nfloats(ng),Nocmp)  
       real(r8), intent(inout) :: szoil0(Nfloats(ng))         
 #endif
@@ -101,9 +99,9 @@
             CALL oil_density_ini(rhoo,frsats,frarom,frasph,             &
      &                       rsats,rarom,rasph)
             CALL oil_size_ini(Doil)
-            frroil0(l,1)=rsats
-            frroil0(l,2)=rarom
-            frroil0(l,3)=rasph
+            ROilCmp(l,1)=rsats
+            ROilCmp(l,2)=rarom
+            ROilCmp(l,3)=rasph
             wfroil0(l,1)=frsats
             wfroil0(l,2)=frarom
             wfroil0(l,3)=frasph
@@ -115,7 +113,7 @@
 # ifdef DISTRIBUTE
 !
 ! Broadcast this to all processors
-      CALL mp_bcastf(ng, iNLM, frroil0)
+      CALL mp_bcastf(ng, iNLM, ROilCmp)
       CALL mp_bcastf(ng, iNLM, wfroil0)
       CALL mp_bcastf(ng, iNLM, szoil0)
 !      IF (MyRank.eq.MyMaster) print*,'oil_paramini_tile: broadcasting 3'
@@ -169,7 +167,7 @@
      &                      DRIFTER(ng) % bounded,                      &
      &                      DRIFTER(ng) % Tinfo,                        &
      &                      DRIFTER(ng) % track,                        & 
-     &                      DRIFTER(ng) % frroil0,                      &  ! ini oil dens components
+     &                      DRIFTER(ng) % ROilCmp,                      &  ! oil dens components
      &                      DRIFTER(ng) % wfroil0,                      &  ! ini oil weight fractions
 #ifdef OIL_DEBUG
      &                      DRIFTER(ng) % szoil0,                       &  ! ini oil size
@@ -190,10 +188,10 @@
      &                            Predictor, my_thread, bounded,        &
      &                            Tinfo, track,                         &
 #ifdef OIL_DEBUG
-     &                            frroil0, wfroil0, szoil0,             &  
+     &                            ROilCmp, wfroil0, szoil0,             &  
      &                            ifltX)     ! DDMITRY
 #else
-     &                            frroil0, wfroil0, szoil0)
+     &                            ROilCmp, wfroil0, szoil0)
 #endif
 !***********************************************************************
       USE mod_param
@@ -221,7 +219,7 @@
       logical, intent(in) :: my_thread(Lstr:)
 
       real(r8), intent(in) :: Tinfo(0:,:)
-      real(r8), intent(inout) :: frroil0(:,:)  
+      real(r8), intent(inout) :: ROilCmp(:,:)  
       real(r8), intent(inout) :: wfroil0(:,:)  
       real(r8), intent(inout) :: szoil0(:)     
       real(r8), intent(inout) :: track(:,0:,:)
@@ -230,7 +228,7 @@
       logical, intent(in) :: my_thread(Lstr:Lend)
 
       real(r8), intent(in) :: Tinfo(0:izrhs,Nfloats(ng))
-      real(r8), intent(inout) :: frroil0(Nfloats(ng),Nocmp)  
+      real(r8), intent(inout) :: ROilCmp(Nfloats(ng),Nocmp)  
       real(r8), intent(inout) :: wfroil0(Nfloats(ng),Nocmp)  
       real(r8), intent(inout) :: szoil0(Nfloats(ng))         
       real(r8), intent(inout) :: track(NFV(ng),0:NFT,Nfloats(ng))
@@ -285,30 +283,27 @@
 ! ------
 ! Checking evap: track a float with max surface exposure
 ! Will delete later - debugging only
-      tsrfx=0.0_r8
-      iFltS=0
-      DO l=Lstr,Lend
-        IF (my_thread(l).and.bounded(l)) THEN
-          IF (Predictor) THEN          
-            tsrfo=track(isrfo,nf,l)
-          ELSE
-            tsrfo=track(isrfo,nfp1,l)
-          ENDIF
-        ENDIF
-        IF (tsrfo.gt.tsrfx+HalfDT) THEN
-          iFltS=l
-          tsrfx=tsrfo
-        ENDIF
-      ENDDO
+!      tsrfx=0.0_r8
+!      iFltS=0
+!      DO l=Lstr,Lend
+!        IF (my_thread(l).and.bounded(l)) THEN
+!          IF (Predictor) THEN          
+!            tsrfo=track(isrfo,nf,l)
+!          ELSE
+!            tsrfo=track(isrfo,nfp1,l)
+!          ENDIF
+!        ENDIF
+!        IF (tsrfo.gt.tsrfx+HalfDT) THEN
+!          iFltS=l
+!          tsrfx=tsrfo
+!        ENDIF
+!      ENDDO
 
-!      iFltS=4116
-!
-!  ---- END --- 
 !
       DO l=Lstr,Lend
         IF (my_thread(l).and.bounded(l)) THEN
 !
-!  If newly relased float, initialize oil fields. 
+!  If newly relased float, initialize oil fields: 
 ! Oil initial parameters that do not change during the simulation
 ! should be already initialized and distributed over
 ! all processors
@@ -320,16 +315,16 @@
             temp=track(ifTvar(itemp),nfp1,l)
             salt=track(ifTvar(isalt),nfp1,l)
 ! 
-            frsats=-1.0 ! to initialize oil fractions <0
-            frarom=-1.0
-            frasph=-1.0
-            CALL oil_density_ini(rhoo,frsats,frarom,frasph,             &
-     &                       rsats,rarom,rasph)
-            CALL oil_size_ini(Doil)
-!
-            rsats=frroil0(l,1)
-            rarom=frroil0(l,2)
-            rasph=frroil0(l,3)
+!            frsats=-1.0 ! to initialize oil fractions <0
+!            frarom=-1.0
+!            frasph=-1.0
+!            CALL oil_density_ini(rhoo,frsats,frarom,frasph,             &
+!     &                       rsats,rarom,rasph)
+!            CALL oil_size_ini(Doil)
+!  Already initialized
+            rsats=ROilCmp(l,1)
+            rarom=ROilCmp(l,2)
+            rasph=ROilCmp(l,3)
             frsats=wfroil0(l,1)
             frarom=wfroil0(l,2)
             frasph=wfroil0(l,3)
@@ -337,6 +332,19 @@
             flat=track(iflat,nfp1,l)
             flon=track(iflon,nfp1,l)
             zoil=track(idpth,nfp1,l)
+!
+! Oil particle density from components
+!
+            CALL oil_density(rhoo,wfroil0(l,1:Nocmp),                   &
+     &                      ROilCmp(l,1:Nocmp))             
+# ifdef OIL_DEBUG
+! Check oil density, frsats not 0, frarom not 0, -> initialization not
+! activated
+            IF (l.eq.ifltX) THEN
+              print*,'Oil Ini, l=',ifltx,'RhoOil=',rhoo,'Wfr=',         &
+     &           wfroil0(l,1:Nocmp),' RhoComp=',ROilCmp(l,1:Nocmp)
+            ENDIF
+# endif
 
             DO i=0,NFT  ! time levels
               track(ifTvar(itemp),i,l)=temp
@@ -351,7 +359,8 @@
               track(idpth,i,l)=zoil
             END DO
           END IF
-
+! END Initialization
+!
 !
 ! Get T, S, Rho water
 !
@@ -366,11 +375,11 @@
 ! correlations and data,” Desalination
 ! and Water Treatment, Vol. 16, pp. 354-380.
 ! To calculate dynamic (abs) sea water visc. 
-          skg = salt*1e-3;                          ! salinty -> kg/kg
-          A1 = 1.541+1.998e-2*temp-9.52e-5*temp**2;
-          B1 = 7.974-7.561e-2*temp+4.724e-4*temp**2;
-          muw = 4.2844e-5+(0.157*(temp+64.993)**2-91.296)**(-1); ! dynamic visc. pure water
-          musw = muw*(1.0_r8+A1*skg+B1*skg**2);                  ! dyn. visc. sea water
+          skg = salt*1e-3                          ! salinty -> kg/kg
+          A1 = 1.541+1.998e-2*temp-9.52e-5*temp**2
+          B1 = 7.974-7.561e-2*temp+4.724e-4*temp**2
+          muw = 4.2844e-5+(0.157*(temp+64.993)**2-91.296)**(-1) ! dynamic visc. pure water
+          musw = muw*(1.0_r8+A1*skg+B1*skg**2)                  ! dyn. visc. sea water
 !
 ! water-oil interfacial tension 
 ! Eq. from Peters and Arabali, "Interfacial tension between oil
@@ -396,7 +405,7 @@
 !
 ! Checking: ++++++++ 
           DO ii=1,Nocmp
-            Rhoc0(ii)=frroil0(l,ii)
+            Rhoc0(ii)=ROilCmp(l,ii)
             Froil0(ii)=wfroil0(l,ii)
             IF (Rhoc0(ii)<1.0 .or. Rhoc0(ii)>1200.0) THEN
               print*,'*** ERR: Rhoc0 invalid',Rhoc0(ii),'ii=',ii
@@ -404,9 +413,6 @@
               print*,'*** ERR: float # l=',l
             ENDIF
           ENDDO
-!          IF (l.eq.4116) THEN
-!            print*,'Time=',time(ng),'l=',l,' frroil0=',frroil0(l,1:3)
-!          ENDIF
 ! +++++++
 
 
@@ -422,10 +428,10 @@
 ! Update rho oil due to weathering processes
 ! at the surface
           DiagSrf=.FALSE.
-          IF (abs(zoil).le.5.0) THEN
+          IF (abs(zoil).le.2.0_r8) THEN
             tsrfo=tsrfo+dt(ng)   ! integrated time at the surface, sec
 !
-            IF (iFltS==0) iFltS=l ! Check evaporation, track surf float
+            IF (iFltS.eq.0) iFltS=l ! Check evaporation, track surf float
 # ifdef OIL_DEBUG
             IF (iFltS==l) THEN 
               DiagSrf=.TRUE.
@@ -436,8 +442,13 @@
 # endif
 !
 !  Evaporation: update rhoo, Doil, Froil
-            CALL oil_evaporation(Rhoc0,Froil0,Doil0,Froil,Doil,rhoo,    &
-     &                           tsrfo,temp,DiagSrf,l)
+! Surface time tsrfo in sec, in evaporation formula
+! it is in minutes
+!
+            IF (Doil.gt.1.e-10_r8 .and. tsrfo.gt.60.0_r8) THEN
+              CALL oil_evaporation(Rhoc0,Froil0,Doil0,Froil,Doil,rhoo,  &
+     &                           tsrfo,temp,DiagSrf,l,dt(ng))
+            ENDIF
           ENDIF
 
           drho=rhowt-rhoo
@@ -448,7 +459,7 @@
 !
 #ifdef WOIL_INTEGRATED
 ! Integrated approach 
-          CALL woil_integrated(rhowt, rhoo, muw, musw, Doil, gg,  &
+          CALL woil_integrated(rhowt, rhoo, muw, musw, Doil, gg,        &
      &                           woil, signw, sigmOW)
 #else
 ! Two-equation approach following 
@@ -510,7 +521,7 @@
 ! all nodes, same initial values
 !        IF (l==4116 .and. bounded(l)) THEN
 !          print*,'Check DRIFT: MyRank=',MyRank,'my_thread=',my_thread(l)
-!          print*,'::: x=',Tinfo(ixgrd,l),' frroil(1)=',frroil0(l,1), &
+!          print*,'::: x=',Tinfo(ixgrd,l),' ROilCmp(1)=',ROilCmp(l,1), &
 !     &           'Doil0=',szoil0(l),  &
 !     &           ' Wfroil0=',wfroil0(l,1)
 !        ENDIF
@@ -523,7 +534,7 @@
 !
 !***********************************************************************
       SUBROUTINE oil_evaporation(Rhoc0,Froil0,Doil0,Froil,Doil,rhoo,    &
-     &                           tsrfo,temp,flgdg,l)
+     &                           tsrfo,temp,flgdg,l,dtime)
 !***********************************************************************
 ! SARA-component evaporation
 ! Evaporation is calculated for each component
@@ -539,17 +550,25 @@
 !          Then, use eq. 38 (Fingas) to calculate evaporated % of oil components
 !
 ! Steps: 1) Calculate parts of evaporated oil component (pevp)
+!           Since evaporation formula depends on T, oil density, direct
+!           application of Fingas produces different evaporation curves
+!           at different time stpes resulting in jumps in the oil
+!           components fractions and oil density. To avoid this
+!           estimate evaporated oil between two time steps p 227 in
+!           Fingas. Use dpevap to step from previous surface time to the
+!           current surface time
+!
 ! 2) Update change in weight by components (mfr) -> change in overall weight (moil)
 ! 3) Calculate new weight fractions for SARA components after evaporation
 ! 4) Update oil density and droplet size
 !
 ! INPUT:
-! Rhoc0 - initial oil dens by components
-! Froil0 - initial wegith fraction (0</= parts </= 1) by components
+! Rhoc0 - oil dens by components (chemical components density doesn't  change)
+! Froil0 - initial (at surface time=0) wegith fraction (0</= parts </= 1) by components
 ! Froil  -  current Weight fractions of saturates, aromatics, asphaltenes
 ! Doil   - current oil size (m)
 ! rhoo   - current total oil droplet density
-! tsrfo - time (sec) since float is at the surface (Note need sec -> min)
+! tsrfo - current surface time (sec) since float is at the surface (Note need sec -> min)
 !  temp - ocean T (however, surface oil T may be higher)
 ! 
 ! OUTPUT - updated state after evaporation: 
@@ -561,7 +580,7 @@
 
       integer, intent(in) :: l
 
-      real(r8), intent(in) :: temp, tsrfo
+      real(r8), intent(in) :: temp, tsrfo, Doil0, dtime
       real(r8), intent(in) :: Rhoc0(Nocmp)  
       real(r8), intent(in) :: Froil0(Nocmp)  
       real(r8), intent(inout) :: Doil, rhoo
@@ -572,58 +591,118 @@
       real(r8) :: Evap, rhowt0
       real(r8) :: TK, aa, bb, api, SG, rhoxx
       real(r8) :: muOil, dmm
-      real(r8) :: tsrfo1, pevp
-      real(r8) :: rhoo0, Doil0, voil0, moil0
-      real(r8) :: SPIg(Nocmp), PEVC(Nocmp)
+      real(r8) :: tsrfo1, tsrfoP, pevp, pevpP, dpevp, pevp1
+      real(r8) :: rhoo0, voil0, moil0
+      real(r8) :: voil, moil, pevp_est
+      real(r8) :: SPIg(Nocmp), PEVC(Nocmp), Mfr(Nocmp)
       real(r8) :: Mfr0(Nocmp), Mfr1(Nocmp), Froil1(Nocmp)
       real(r8) :: moil1, rhoo1, voil1, Doil1
 
       integer :: ii
 
-! Given information by components (weight fraction and density)
-! Get oil droplet weight (moil0), density, etc
+! Given initial mass weight fraction Froil0, oil droplet size Doil0,
+! densities of oil chemical components Rhoc0 find
+! inital (before surfacing) mass fraction (Mfr0), 
+!  oil droplet density (rhoo0),
+!  oil droplet volume (voil0), oil droplet mass (moil0)
       CALL oil_comp2total(Froil0,Rhoc0,Mfr0,rhoo0,Doil0,voil0,moil0)
+
+!
+! Get full oil info for the previous time step
+!
+      CALL oil_comp2total(Froil,Rhoc0,Mfr,rhoxx,Doil,voil,moil)
+      IF (abs(rhoxx/rhoo-1.0_r8).gt.1.0e-8_r8) THEN
+        print*,'evapor: *** ERR current oil density mismatch Froil'
+        print*,'evapor: *** ERR rhoo=',rhoo,'rhoxx',rhoxx,'Froi',Froil
+      ENDIF
+
 
 ! calculate SPI gravity
       rhowt0=1000.0_r8
       SPIg=Rhoc0/rhowt0
 
-      SG=-1.e23
+      SG=-1.e23_r8
       DO ii=1,Nocmp ! evaporation of individual oil components
         SG=SPIg(ii)
         rhoxx=Rhoc0(ii)        
         api=141.5_r8/SG-131.5_r8  !API gravity
 !
 ! Calc viscosity based on Sanchez-Minero et al, 2014
+! Comparison of correlations based on API gravity for predicting
+! viscosity  of crude oils
+! Fuel, 138, 193-199
+!
+! For heavy oil: API<10.0 (rhoo>1000)  viscosity should be estimated using 
+! one of the methods in Bahadori et al., Oil and Gas Facilities, 2015
+! "Prediction of Heavy-Oil Viscosities With a Simple Correlation Approach"
+! 
         TK=temp+273.15_r8
         aa=3.9e-5_r8*api**3-4.0e-3_r8*api**2+0.1226_r8*api-0.7626_r8
-        IF (aa<0.001) aa=0.001 ! super-viscous and dense oil (>1010) may give aa<0
-        bb=9.1638e9_r8*api**(-1.3257_r8)
-        muOil=aa*exp(bb/TK**3) ! oil component viscosity, cPoise
+        IF (aa>1.e-10) THEN 
+          bb=9.1638e9_r8*api**(-1.3257_r8)
+          muOil=aa*exp(bb/TK**3) ! oil component viscosity, cPoise
+        ELSE
+          aa=-0.71523_r8*api+22.13766_r8
+          bb=0.269024_r8*api-8.26_r8
+          muOil=(10.0_r8**aa)*(TK**bb) ! oil component viscosity, cPoise
+        ENDIF
 !
-! Fingas, 2011, ch. 9
+! Fingas, 2011, ch. 9, eq.39
 ! Evaporation based on dens and viscosity
 ! Parameter Evap for each component
         Evap=15.4_r8-14.5_r8*rhoxx/1000.0_r8+2.58_r8/muOil
 
-! Finga's formula calculates fraction evaporated (fr_evap) over the total time from t=0 -> t1
-        tsrfo1=tsrfo/60.0_r8 ! sec->min
-        IF (tsrfo1<1.e-10) tsrfo1=1.e-10
 
-        pevp=((Evap+0.675_r8)+0.045_r8*(temp-15.0_r8))*   &
-     &         log(tsrfo1)/100.0_r8                            !  frac. evaporated over total time
+! Finga formula calculates fraction evaporated (fr_evap) over the total time from t=0 -> t1
+! Note that the formula works only for time>1 min
+! if time<1 pevp will be <0 
+!
+! Finga's approach doesn't take into account varying t, oil density
+! during the time interval t=0, ... , tN
+! at every time step t1=t0+dt the evaporation curve
+! is calculated given new oil density, temperature etc
+! this results in different evaporation rates and 
+! at time t1 evaporation rate may be less than at t0, producing 
+! smaller reduction of the light oil components and lighter oil
+! This is unrealistic
+! This approach needs some adjustment
+!
+! At every time step, evaporation curve is corrected
+! based on the previous surface time step estimates
+! of oil evaporation
+! the offset is added, i.e. only the chnage of evaporation
+! between t0 and t1 is taken instead of the the evaporation
+! over the whole time from t=0, ..., t1
+!
+        tsrfo1=tsrfo/60.0_r8          ! sec->min surface time, current time step
+        tsrfoP=(tsrfo-dtime)/60.0_r8 ! min, previous surface time
+        IF (tsrfo1.le.1.0_r8) CYCLE ! surf time cannot be < 1 min
+        IF (tsrfoP.lt.1.0_r8) tsrfoP=1.0_r8
 
-        PEVC(ii)=pevp
+        pevpP=((Evap+0.675_r8)+0.045_r8*(temp-15.0_r8))*                &
+     &         log(tsrfoP)/100.0_r8           !  frac. evaporated over total time t-1, current cond. 
+        pevp1=((Evap+0.675_r8)+0.045_r8*(temp-15.0_r8))*                &
+     &         log(tsrfo1)/100.0_r8                  !  frac. evaporated over total time to current
+        dpevp=pevp1-pevpP       ! fraction of oil compound evaporated during dt
+! 
+! Reconstruct evaporation from previous time step
+! under conditions at time t-1
+!
+        pevp_est=1.0_r8-Mfr(ii)/Mfr0(ii)
+        pevp=pevp_est+dpevp
+        PEVC(ii)=pevp          ! evaporation of component ii under current conditions
 
 # ifdef OIL_DEBUG
-        IF (isnan(pevp)) THEN
+        IF (pevp.lt.0.0_r8) THEN
           flgdg=.true.
-          print*,'*** NaN pevp *** Float l=',l,'Evap=',Evap
-          print*,'*** rhoxx=',rhoxx,'muOil=',muOil
-          print*,'aa=',aa,'bb=',bb,'api=',api,' SG=',SG
-          print*,'*** ERR  pevp*** temp=',temp,' tsrfo1=',tsrfo1
-          print*,'   ********** '
-       ENDIF
+          print*,'*** ERR: oil_evap pevp<0 Float l=',l,'Tsurf=',tsrfo1, &
+     &            'Evap=',Evap
+          print*,'evapor: ** ERR ii=',ii,' Float=',l,'temp=',temp,      &
+     &           'mu=',muOil,'Evap=',Evap
+          print*,'evapor: *** ERR pevpP=',pevpP,                        &
+     &         ' pevp1=',pevp1, 'dpevp=',dpevp,'Mfr=',Mfr(ii),          &
+     &         'Mfr0=',Mfr0(ii), ' pevp_est=',pevp_est
+        ENDIF
 # endif        
 
       ENDDO  ! evaporation by components
@@ -636,29 +715,36 @@
       rhoo1=1.0_r8/dmm           ! new oil density
       voil1=moil1/rhoo1
       Doil1=2.0_r8*(3.0_r8/4.0_r8*voil1/pi)**(1./3.)
-
-      rhoo=rhoo1
-      Doil=Doil1
-      Froil=Froil1
+!
+# ifdef OIL_DEBUG
+      IF (rhoo1.lt.rhoo) THEN
+        print*,'evapor: ** ERR new dens ',rhoo1,' < old',rhoo,'flt=',l
+        flgdg=.TRUE.
+      ENDIF
+# endif
 
 # ifdef OIL_DEBUG
       IF (flgdg) THEN
-        print*,' ---    Evaporation Subr, surf time, min:',tsrfo1
+        print*,' ---    evapor:, surf time, min:',tsrfo1,'flt=',l
         print*,' Evaporated:',PEVC
         print*,'Weight Oil comp, initial:',Mfr0
         print*,'Weight Oil comp, new:',Mfr1
-        print*,'Weight Fraction, initial:',Froil0
+        print*,'Weight Fraction, initial:',Froil0,' Last:',Froil
         print*,'Weight Fraction, new:',Froil1
-        print*,'Oil Rho, initial:',rhoo0
+        print*,'Oil Rho, initial:',rhoo0,' Last:',rhoo
         print*,'Oil Rho, new:',rhoo1
         print*,'Oil Vol,m3, initial:',voil0
         print*,'Oil Vol,m3, new:',voil1
         print*,'Oil Size,m, initial:',Doil0
-        print*,'Oil Size,m, new:',Doil1
+        print*,'Oil Size,m, new:',Doil1,' Last:',Doil
         print*,' ------------'
         print*,' '
       ENDIF
 # endif
+! Update oil density, size, oil component mass fraction
+      rhoo=rhoo1
+      Doil=Doil1
+      Froil=Froil1
 
       RETURN
       END SUBROUTINE oil_evaporation
@@ -678,8 +764,8 @@
       USE mod_scalars
       USE mod_floats
 
-      real(r8), intent(in) :: Froil(Nocmp), Rhoc(Nocmp)
-      real(r8), intent(inout) :: rhoo, Doil, voil, moil
+      real(r8), intent(in) :: Froil(Nocmp), Rhoc(Nocmp), Doil
+      real(r8), intent(inout) :: rhoo, voil, moil
       real(r8), intent(inout) :: Mfr(Nocmp) 
 
       real(r8) :: dmm
@@ -699,6 +785,13 @@
       SUBROUTINE woil_integrated(rhowt, rhoo, muw, musw, Doil, gg, &
      &                           woil, signw, sigmOW)
 !***********************************************************************
+! Special case when drho <0 should be implemented (i.e.
+! when oil particle becomes negatively buoyant due
+! to wethering)
+! At the moment, sign of drho is multiplyed by woil
+! just to keep the model from blowing up and 
+! somehow simulate sinking of negatively buoynat particles 
+!
       USE mod_param
 !
 ! Imported variables declaration
@@ -714,7 +807,7 @@
       drho=rhowt-rhoo
 
       IF (Doil<1.1e-3) THEN ! Small size spherical range
-        ND=4.0_r8*rhowt*drho*gg*(Doil**3)/(3.0_r8*musw**2)
+        ND=4.0_r8*rhowt*abs(drho)*gg*(Doil**3)/(3.0_r8*musw**2)
         logW=log10(ND)
 
         IF (ND.le.73.0) THEN
@@ -734,7 +827,7 @@
         IF (Re>0.0) THEN
           woil=signw*Re*musw/(rhowt*Doil)
         ELSE
-          woil=vbound   ! out of range value
+          woil=signw*vbound   ! out of range value
         ENDIF
       
       ELSE
@@ -753,9 +846,9 @@
           woil=signw*musw/(rhowt*Doil)*(MW**(-0.149))*(JJ-0.857)
 
         ELSEIF (E0.gt.40.0) THEN
-          woil=signw*0.711*sqrt(gg*Doil*drho/rhowt)
+          woil=signw*0.711*sqrt(gg*Doil*abs(drho)/rhowt)
         ELSE  ! out of bound case
-          woil=vbound
+          woil=signw*vbound
         ENDIF
 
       ENDIF
@@ -825,6 +918,26 @@
       rhoo=1.0_r8/v1      
 
       END SUBROUTINE oil_density_ini
+!
+!*********************************************************************** 
+      SUBROUTINE oil_density(roil,wfr0,ROilCmp)
+!*********************************************************************** 
+! Calculate density of oil particles given
+! wiegth fraction of oil components wfr0
+! oil component densities ROilCmp
+! Number of components is Ncmp
+      USE mod_floats
+
+      real(r8), intent(in) :: wfr0(Nocmp), ROilCmp(Nocmp)
+      real(r8), intent(inout) :: roil
+      real(r8) :: dmm
+
+      dmm=sum(wfr0/RhoOilComp)
+      roil=1.0_r8/dmm           ! mean oil particledensity, in the float
+
+      END SUBROUTINE oil_density
+
+
 
 !*********************************************************************** 
       SUBROUTINE oil_size_ini(osize)

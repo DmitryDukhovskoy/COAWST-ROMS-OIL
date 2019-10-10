@@ -99,6 +99,7 @@
 # if defined ICE_MODEL && defined ICE_THERMO
       USE ice_frazil_mod, ONLY : ice_frazil
 # endif
+      USE set_depth_mod,        ONLY : set_depth
       USE set_massflux_mod, ONLY : set_massflux
 # if defined SSH_TIDES || defined UV_TIDES || defined POT_TIDES
       USE set_tides_mod, ONLY : set_tides
@@ -115,6 +116,7 @@
 # endif
       USE wvelocity_mod, ONLY : wvelocity
       USE dateclock_mod, ONLY : time_string
+
 !
       implicit none
 !
@@ -190,6 +192,7 @@
 !
             DO tile=first_tile(ng),last_tile(ng),+1
               CALL ini_zeta (ng, tile, iNLM)
+              CALL set_depth (ng, tile, iNLM)
             END DO
 !$OMP BARRIER
 !
@@ -222,7 +225,7 @@
         CALL nesting (5)
 # endif
 
-# ifndef OFFLINE_FLOATS
+# if defined OFFLINE_TPASSIVE || defined OFFLINE_BIOLOGY
 !-----------------------------------------------------------------------
 !  Set fields for vertical boundary conditions. Process tidal forcing,
 !  if any.
@@ -281,7 +284,7 @@
 !
         DO ng=1,Ngrids
           DO tile=first_tile(ng),last_tile(ng),+1
-# ifndef OFFLINE_FLOATS
+# if defined OFFLINE_TPASSIVE || defined OFFLINE_BIOLOGY
 #  if defined ANA_VMIX
             CALL ana_vmix (ng, tile, iNLM)
 #  elif defined LMD_MIXING
@@ -345,7 +348,7 @@
 !  Compute right-hand-side terms for 3D equations.
 !-----------------------------------------------------------------------
 !
-# ifndef OFFLINE_FLOATS
+# if defined OFFLINE_TPASSIVE || defined OFFLINE_BIOLOGY
         DO ng=1,Ngrids
           DO tile=first_tile(ng),last_tile(ng),+1
             CALL rhs3d (ng, tile)
@@ -360,9 +363,27 @@
 # ifdef NESTING
         CALL nesting (12)
 # endif
-# endif
 
-# ifndef OFFLINE_FLOATS
+
+! !
+! !-----------------------------------------------------------------------
+! !  Recompute depths and thicknesses using the new time filtered
+! !  free-surface.
+! !  check this
+! !-----------------------------------------------------------------------
+! !
+!         DO ig=1,GridsInLayer(nl)
+!           ng=GridNumber(ig,nl)
+!           DO tile=first_tile(ng),last_tile(ng),+1
+!             CALL set_depth (ng, tile, iNLM)
+!           END DO
+! !$OMP BARRIER
+!         END DO
+! # ifdef NESTING
+!         CALL nesting (14)
+! # endif
+
+
 !
 !-----------------------------------------------------------------------
 !  Time-step vertical mixing turbulent equations and passive tracer
@@ -397,7 +418,7 @@
 !  Time-step tracer equations.
 !-----------------------------------------------------------------------
 !
-# if !defined OFFLINE_FLOATS
+# if defined OFFLINE_TPASSIVE || defined OFFLINE_BIOLOGY
         DO ng=1,Ngrids
           DO tile=first_tile(ng),last_tile(ng),+1
             CALL step3d_t (ng, tile)
@@ -413,7 +434,7 @@
 # endif
 # endif
 
-# ifdef FLOATS
+# ifdef OFFLINE_FLOATS
 !
 !-----------------------------------------------------------------------
 !  Compute Lagrangian drifters trajectories: Split all the drifters
