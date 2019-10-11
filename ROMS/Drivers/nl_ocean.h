@@ -334,7 +334,7 @@
 !
 !$OMP PARALLEL
 #ifdef SOLVE3D
-# if defined OFFLINE_BIOLOGY || defined OFFLINE_FLOATS
+# if defined OFFLINE_BIOLOGY || defined OFFLINE_FLOATS || defined OFFLINE_TPASSIVE
       CALL main3d_offline (MyRunInterval)
 # else
       CALL main3d (MyRunInterval)

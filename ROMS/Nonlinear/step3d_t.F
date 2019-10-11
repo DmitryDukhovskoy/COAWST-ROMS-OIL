@@ -190,6 +190,9 @@
 # ifdef T_PASSIVE
       USE pt3dbc_mod, ONLY : pt3dbc_tile
 # endif
+# if defined OFFLINE_BIOLOGY
+      USE mod_biology
+# endif
 !
 !  Imported variable declarations.
 !
@@ -406,6 +409,8 @@
 # ifdef OFFLINE_BIOLOGY
         DO ibt=1,NBT
           itrc=idbio(ibt)
+# elif defined OFFLINE_TPASSIVE
+        DO itrc=NAT+1,NAT+NPT
 # else
         DO itrc=1,NT(ng)
 # endif
@@ -427,6 +432,8 @@
 # ifdef OFFLINE_BIOLOGY
       T_LOOP : DO ibt=1,NBT
         itrc=idbio(ibt)
+# elif defined OFFLINE_TPASSIVE
+      T_LOOP : DO itrc=NAT+1,NAT+NPT
 # else
 !
 !  Compute horizontal tracer advection fluxes.
@@ -785,6 +792,8 @@
 #ifdef OFFLINE_BIOLOGY
         DO ibt=1,NBT
           itrc=idbio(ibt)
+#elif defined OFFLINE_TPASSIVE
+        DO itrc=NAT+1,NAT+NPT
 #else
         DO itrc=1,NT(ng)
 #endif
@@ -1271,6 +1280,8 @@
 #ifdef OFFLINE_BIOLOGY
       DO ibt=1,NBT
         itrc=idbio(ibt)
+#elif defined OFFLINE_TPASSIVE
+      DO itrc=NAT+1,NAT+NPT
 #else
       DO itrc=1,NT(ng)
 #endif
@@ -1388,6 +1399,8 @@
 #ifdef OFFLINE_BIOLOGY
         DO ibt=1,NBT
           itrc=idbio(ibt)
+#elif defined OFFLINE_TPASSIVE
+        DO itrc=NAT+1,NAT+NPT
 #elif defined TS_VAR
         DO itrc=1,NAT
 #else
@@ -1597,6 +1610,8 @@
 #ifdef OFFLINE_BIOLOGY
       DO ibt=1,NBT
         itrc=idbio(ibt)
+#elif defined OFFLINE_TPASSIVE
+      DO itrc=NAT+1,NAT+NPT
 #else
 !  Initialize tracer counter index. The "tclm" array is only allocated
 !  to the NTCLM fields that need to be processed. This is done to

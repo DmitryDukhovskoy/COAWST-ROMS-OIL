@@ -28,7 +28,7 @@
 # First the defaults
 #
                FC := ifort
-           FFLAGS := -fp-model precise
+           FFLAGS := -fp-model fast -heap-arrays
 #          FFLAGS += -heap-arrays
               CPP := /usr/bin/cpp
          CPPFLAGS := -P -traditional
@@ -73,7 +73,7 @@ endif
 ifdef USE_MPI
          CPPFLAGS += -DMPI
  ifdef USE_MPIF90
-               FC := mpif90
+               FC := mpiifort #mpif90
  else
              LIBS += -lfmpi-pgi -lmpi-pgi
  endif
@@ -86,7 +86,7 @@ endif
 
 ifdef USE_DEBUG
 #          FFLAGS += -g -check bounds -traceback
-           FFLAGS += -g -check uninit -ftrapuv -traceback
+           FFLAGS += -g -check uninit -traceback
            CFLAGS += -g
          CXXFLAGS += -g
 else

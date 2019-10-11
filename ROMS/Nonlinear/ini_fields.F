@@ -1108,7 +1108,8 @@
 
 # include "set_bounds.h"
 
-#ifndef OFFLINE_FLOATS
+! Commented out  by Lixin
+!#ifndef OFFLINE_FLOATS
 !
 !-----------------------------------------------------------------------
 !  Initialize other time levels for free-surface.
@@ -1252,7 +1253,8 @@
 #  endif
 # endif
 
-#endif  /* OFFLINE_FLOATS */
+! Commented out by Lixin
+!#endif  /* OFFLINE_FLOATS */
 
 # ifdef SOLVE3D
 !
