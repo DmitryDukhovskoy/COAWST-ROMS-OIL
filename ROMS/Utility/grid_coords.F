@@ -170,8 +170,8 @@
 !              print *,'The preceeding print fixes a memory bug somehow.'
 !            END IF
 #endif
+#if defined FLOAT_OIL && defined OIL_DEBUG
 ! DDMITRY
-#ifdef FLOAT_OIL
             IF (l.eq.-100) THEN
               print*,'+++ grid_coords: Float # ',l,'ng=',ng, &
                      ' Nfloats=',Nfloats
@@ -183,14 +183,16 @@
                        ' ',DRIFTER(ng) % Tinfo(ii,Nfloats(ng))
               ENDDO
             ENDIF
-#endif
 ! DD END
+#endif
             Kflt(l)=zfloat
             IF (zfloat.le.0.0_r8) THEN
 
 #ifndef OFFLINE_FLOATS_LATLON
               i=INT(DRIFTER(ng)%Tinfo(ixgrd,l)) ! Fractional positions
               j=INT(DRIFTER(ng)%Tinfo(iygrd,l)) ! are still in this cell
+!
+! If float initial position below bottom:
               IF (zfloat.lt.GRID(ng)%z_w(i,j,0)) THEN
                 zfloat=GRID(ng)%z_w(i,j,0)+5.0_r8
                 DRIFTER(ng)%Fz0(l)=zfloat

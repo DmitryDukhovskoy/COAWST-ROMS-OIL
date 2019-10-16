@@ -1005,9 +1005,15 @@
                 Lstr=1
                 Lend=Nfloats(ng)
 #  endif
+# if defined FLOAT_OIL && defined OIL_DEBUG
+! DDMITRY
+                IF (Master) THEN
+                  print*,' Calling step_floats, Rank=',MyRank
+                ENDIF
+# endif
                 CALL step_floats (ng, Lstr, Lend)
 
-#  if defined FLOAT_OIL && defined OIL_EULR
+# if defined FLOAT_OIL && defined OIL_EULR
 ! DDMITRY 
 ! Map Lagrangian -> Euler oil floats for biology/sediments modules
 ! model=iNLM nonlinear model assumed for now
@@ -1035,7 +1041,7 @@
                    ENDIF
                  ENDDO  ! tile
 !
-!  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+! DDMITRY  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 !  Here: CALL BIOLOGY
 #   ifdef OIL_BIO
                  CALL bio_degradation(ng, tile)
@@ -1043,7 +1049,7 @@
 !        CALL SEDIMENTS
 !  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 !
-!  Here: Update Oil state in Lagr frame
+!  DDMITRY Here: Update Oil state in Lagr frame
                  DO tile=last_tile(ng), first_tile(ng),-1
 #   ifdef OIL_MAP_DEBUG
                   IF (Master) THEN
@@ -1061,10 +1067,10 @@
      &                       f8.6," sec")',Tfinish-Tstart
                      print*,'   '
                    ENDIF                
-                 ENDDO  ! tile 
 #   endif
+                 ENDDO  ! tile 
 ! END DDMITRY
-#  endif
+# endif
 !
 !$OMP BARRIER
 !
@@ -1075,7 +1081,7 @@
                 nfm1(ng)=MOD(nfm1(ng)+1,NFT+1)
                 nfm2(ng)=MOD(nfm2(ng)+1,NFT+1)
                 nfm3(ng)=MOD(nfm3(ng)+1,NFT+1)
-              END IF
+              END IF  ! IF Lfloats
             END DO ! ig
 # endif
 
