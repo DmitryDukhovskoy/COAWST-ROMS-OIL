@@ -59,9 +59,6 @@
 !  temp, salt - water T/S
 !  rhoo - oil particle density
 !
-!      real(r8), parameter :: pi=3.14159265358979, &
-!      real(r8), Parameter :: gg=9.81
-
       integer :: l
 
       real(r8) :: rhoo
@@ -347,6 +344,7 @@
 # endif
 
             DO i=0,NFT  ! time levels
+!              print*,'Initializ temp=',temp,'S=',salt
               track(ifTvar(itemp),i,l)=temp
               track(ifTvar(isalt),i,l)=salt
               track(isats,i,l)=frsats
@@ -366,6 +364,9 @@
 !
           temp=track(ifTvar(itemp),nfp1,l)
           salt=track(ifTvar(isalt),nfp1,l)
+! Seems to be an overshoot problem in some grid points
+! with negative S near the Mississip. river
+          if (salt.le.0.1_r8) salt=0.1_r8 ! to avoid nans in density
           CALL water_dens0(temp,salt,rhowt)
 
 ! Calculate dynamic viscosity for sea water

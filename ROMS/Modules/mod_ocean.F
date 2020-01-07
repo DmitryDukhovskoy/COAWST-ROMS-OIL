@@ -157,6 +157,12 @@
       defined BIO_UMAINE) && defined CARBON
           real(r8), pointer :: pH(:,:)
 # endif
+! XCHEN MMMM
+# if (defined BIO_CSOMIO || defined ESTUARYBGC ||      \
+      defined BIO_UMAINE) && defined CARBON
+          real(r8), pointer :: pH(:,:)
+# endif
+! XCHEN WWWW
 # if defined ESTUARYBGC && defined SPECTRAL_LIGHT 
           real(r8), pointer :: PARout(:,:,:)
           real(r8), pointer :: PARs(:,:,:)
@@ -463,6 +469,12 @@
       defined BIO_UMAINE) && defined CARBON
       allocate ( OCEAN(ng) % pH(LBi:UBi,LBj:UBj) )
 # endif
+! XCHEN MMMM
+# if (defined BIO_CSOMIO || defined ESTUARYBGC ||           \
+      defined BIO_UMAINE) && defined CARBON
+      allocate ( OCEAN(ng) % pH(LBi:UBi,LBj:UBj) )
+# endif
+! XCHEN WWWW
 # if defined ESTUARYBGC && defined SPECTRAL_LIGHT
       allocate ( OCEAN(ng) % PARout(LBi:UBi,LBj:UBj,N(ng)) )
       allocate ( OCEAN(ng) % PARs(LBi:UBi,LBj:UBj,NBAND) )
@@ -807,6 +819,12 @@
         && defined CARBON && defined SOLVED3D
             OCEAN(ng) % pH(i,j) = 8.0_r8
 #endif
+! XCHEN MMMM
+#if (defined BIO_CSOMIO || defined ESTUARYBGC || defined BIO_UMAINE) \
+        && defined CARBON && defined SOLVED3D
+            OCEAN(ng) % pH(i,j) = 8.0_r8
+#endif
+! XCHEN WWWW
 #if defined NEMURO_SED1
             OCEAN(ng) % PONsed(i,j) = IniVal
             OCEAN(ng) % OPALsed(i,j) = IniVal
@@ -885,6 +903,16 @@
             END DO
           END DO
 # endif
+! XCHEN MMMM
+# if defined BIO_CSOMIO && defined SPECTRAL_LIGHT
+          DO k=1,NBAND
+            DO i=Imin,Imax
+              OCEAN(ng) % PARs(i,j,k) = IniVal
+              OCEAN(ng) % SpKd(i,j,k) = IniVal
+            END DO
+          END DO
+# endif
+! XCHEN WWWW
           DO k=0,N(ng)
             DO i=Imin,Imax
               OCEAN(ng) % ru(i,j,k,1) = IniVal

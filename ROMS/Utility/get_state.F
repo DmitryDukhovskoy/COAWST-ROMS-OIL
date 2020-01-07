@@ -1083,6 +1083,13 @@
           IF (get_var(idTvar(itrc))) THEN
             foundit=find_string(var_name, n_var,                        &
      &                          TRIM(Vname(1,idTvar(itrc))), varid)
+! DDMITRY
+            IF (Master .and. foundit) THEN
+              print*,'Reading ini ',itrc,' ',TRIM(Vname(1,idTvar(itrc)))
+!              print*,'idTvar=',idTvar(itrc)
+!              print*,'Perfect3D=',Perfect3D,' Tindex=',Tindex
+            ENDIF
+!  END DD
             IF (foundit) THEN
               gtype=var_flag(varid)*r3dvar
               IF (Perfect3D) THEN
@@ -1105,6 +1112,11 @@
      &                            GRID(ng) % rmask,                     &
 #  endif
      &                            OCEAN(ng) % t(:,:,:,Tindex,itrc))
+! DDMITRY
+              IF (Master .and. itrc.eq.18) THEN
+                print*,'Read in iSbug=',OCEAN(ng) % t(141,78,4,Tindex,itrc)
+              ENDIF
+! END DD
               END IF
               IF (FoundError(status, nf90_noerr, __LINE__,              &
      &                       __FILE__)) THEN

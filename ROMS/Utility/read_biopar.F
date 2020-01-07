@@ -38,7 +38,21 @@
 # elif defined RED_TIDE
 #  include <red_tide_inp.h>
 # endif
-#else
-      SUBROUTINE read_BioPar
-      END SUBROUTINE read_BioPar
+! XCHEN COMMENT MMMM
+!#else
+!      SUBROUTINE read_BioPar
+!      END SUBROUTINE read_BioPar
+! XCHEN COMMENT WWWW
 #endif
+
+! XCHEN MMMM
+#if defined BIOLOGY && defined BIO_CSOMIO
+# include <csomio_inp.h>
+#endif
+! XCHEN WWWW
+
+
+
+
+
+

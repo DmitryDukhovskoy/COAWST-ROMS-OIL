@@ -904,9 +904,17 @@
                 CALL gls_corstep (ng, tile)
 # endif
 # if defined WEC_VF && defined WAVE_MIXING
-            CALL wec_wave_mix (ng, tile)
+                CALL wec_wave_mix (ng, tile)
 # endif
-# ifdef BIOLOGY
+! -------------------------------------------
+! Biology and sediments
+! --------------------------------------------
+! DDMITRY
+!# ifdef OIL_BIO
+!                CALL bio_degradation(ng, tile)  ! fake biodegradation to check mapping
+!# endif    
+! END DD
+# ifdef BIOLOGY 
                 CALL biology (ng, tile)
 # endif
 # ifdef SEDIMENT
@@ -914,7 +922,46 @@
 # endif
               END DO
 !$OMP BARRIER
-            END DO
+# if defined FLOAT_OIL && defined OIL_EULR 
+! DDMITRY
+! Update OIL information map Euler -> Lagrangian
+              IF (Lfloats(ng)) THEN
+#  ifdef _OPENMP
+                chunk_size=(Nfloats(ng)+numthreads-1)/numthreads
+                Lstr=1+MyThread*chunk_size
+                Lend=MIN(Nfloats(ng),Lstr+chunk_size-1)
+#  else
+                Lstr=1
+                Lend=Nfloats(ng)
+#  endif
+! ------------------------------------------------------------
+!  Update Oil state in Lagr frame: Euler-> Lagrangian mapping
+!  map oil info after biology/sediment weathering processes 
+! ------------------------------------------------------------
+                DO tile=last_tile(ng),first_tile(ng),-1
+#   ifdef OIL_MAP_DEBUG
+                  IF (Master) THEN
+                     print*,' =========  Calling euler2lagr ====='
+                     CALL CPU_TIME(Tstart)
+                   ENDIF                 
+#   endif
+!
+                 CALL euler2lagr(ng, tile, Lstr, Lend, nf(ng))
+!
+#   ifdef OIL_MAP_DEBUG
+                   IF (Master) THEN
+                     CALL CPU_TIME(Tfinish)
+                     print '("======  euler2lagr done, CPU Time: ",     &
+     &                       f8.6," sec")',Tfinish-Tstart
+                     print*,'   '
+                   ENDIF                
+#   endif
+                 ENDDO  ! tile 
+!$OMP BARRIER
+              END IF  ! IF Lfloats
+# endif
+! END DD
+            END DO    ! ig
 
 # ifndef TS_FIXED
 !
@@ -984,7 +1031,8 @@
             END DO
 # endif
 
-# ifdef FLOATS
+! DDMITRY: Lagrangian drifters
+# ifdef FLOATS 
 !
 !-----------------------------------------------------------------------
 !  Compute Lagrangian drifters trajectories: Split all the drifters
@@ -1013,62 +1061,48 @@
 # endif
                 CALL step_floats (ng, Lstr, Lend)
 
-# if defined FLOAT_OIL && defined OIL_EULR
+# if defined FLOAT_OIL && defined OIL_EULR 
 ! DDMITRY 
 ! Map Lagrangian -> Euler oil floats for biology/sediments modules
 ! model=iNLM nonlinear model assumed for now
                 DO tile=last_tile(ng),first_tile(ng),-1
 #   ifdef OIL_MAP_DEBUG
                   IF (Master) THEN
-                     print*,'   ^^^^^^^^^^^^ TILE= ',tile
-                     print*,'Calling lagr2euler'
-                     CALL CPU_TIME(Tstart)
-                   ENDIF                 
+                    print*,'   ^^^^^^^^^^^^ TILE= ',tile
+                    print*,'Calling lagr2euler'
+                    CALL CPU_TIME(Tstart)
+                  ENDIF                 
 #   endif
-                   CALL lagr2euler (ng, tile, Lstr, Lend)
-#   ifdef OIL_MAP_DEBUG
-                   IF (Master) THEN
-                     CALL CPU_TIME(Tfinish)
-!                     print*,'lagr2euler done: '
-                     print '("lagr2euler done, CPU Time: ",             & 
-     &                       f8.6," sec")',Tfinish-Tstart
-                     print*,' ^^^^^^^^^^^^^  '
-                   ENDIF                 
-#   endif
-                   IF ( (MOD(iic(ng),10).eq.0) .and.                     &
-     &                  (iic(ng).ne.ntstart(ng)) ) THEN
-                     CALL metrics_oil (ng, tile, iNLM, Lstr, Lend)
-                   ENDIF
-                 ENDDO  ! tile
-!
-! DDMITRY  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-!  Here: CALL BIOLOGY
-#   ifdef OIL_BIO
-                 CALL bio_degradation(ng, tile)
-#   endif    
-!        CALL SEDIMENTS
-!  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-!
-!  DDMITRY Here: Update Oil state in Lagr frame
-                 DO tile=last_tile(ng), first_tile(ng),-1
+                  CALL lagr2euler (ng, tile, Lstr, Lend)
 #   ifdef OIL_MAP_DEBUG
                   IF (Master) THEN
-                     print*,' =========  Calling euler2lagr ====='
-                     CALL CPU_TIME(Tstart)
-                   ENDIF                 
-#   endif
-!
-                 CALL euler2lagr(ng, tile, Lstr, Lend)
-!
-#   ifdef OIL_MAP_DEBUG
-                   IF (Master) THEN
-                     CALL CPU_TIME(Tfinish)
-                     print '("======  euler2lagr done, CPU Time: ",     &
+                    CALL CPU_TIME(Tfinish)
+!                     print*,'lagr2euler done: '
+                    print '("lagr2euler done, CPU Time: ",              & 
      &                       f8.6," sec")',Tfinish-Tstart
-                     print*,'   '
-                   ENDIF                
+                    print*,' ^^^^^^^^^^^^^  '
+                  ENDIF                 
 #   endif
-                 ENDDO  ! tile 
+                  IF ( (MOD(iic(ng),10).eq.0) .and.                     &
+     &                 (iic(ng).ne.ntstart(ng)) ) THEN
+                    CALL metrics_oil (ng, tile, iNLM, Lstr, Lend)
+                  ENDIF
+                ENDDO  ! tile
+!
+! -------------------------------------------
+! Biology and sediments
+! --------------------------------------------
+!#   ifdef OIL_BIO
+!     CALL bio_degradation(ng, tile)  ! fake biodegradation to check mapping
+!#   endif    
+
+! ------------------------------------------------------------
+!  Update Oil state in Lagr frame: Euler-> Lagrangian mapping
+!
+!  MOVED up after bio/sediments modules
+!
+! ------------------------------------------------------------
+!
 ! END DDMITRY
 # endif
 !
@@ -1082,8 +1116,9 @@
                 nfm2(ng)=MOD(nfm2(ng)+1,NFT+1)
                 nfm3(ng)=MOD(nfm3(ng)+1,NFT+1)
               END IF  ! IF Lfloats
-            END DO ! ig
+            END DO ! ig Grids
 # endif
+!
 
           END DO STEP_LOOP
 

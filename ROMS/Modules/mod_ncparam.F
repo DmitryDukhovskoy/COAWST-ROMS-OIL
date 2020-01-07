@@ -2215,8 +2215,19 @@
 #  include <npzd_iron_var.h>
 # elif defined RED_TIDE
 #  include <red_tide_var.h>
+! DDMITRY
+# elif defined BIO_CSOMIO || defined OIL_BIO
+#  include <csomio_var.h>
 # endif
 #endif
+
+! XCHEN MMMM
+! DDMITRY - commented out, this is included above
+!# if defined BIOLOGY && defined BIO_GENOME  
+!#  include <genome_var.h>
+!#endif  
+! END DD
+! XCHEN WWWW
 
 #if defined SEDIMENT || defined BBL_MODEL
 #  include <sediment_var.h>

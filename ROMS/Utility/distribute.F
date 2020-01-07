@@ -4400,7 +4400,7 @@
               np=np+1
               ic=i+Ioff+jc
               Awrk(ic)=Asend(np)
-              print*,'distribute: np=',np,' Awrk(ic)=',Awrk(ic)
+! DDMITRY              print*,'distribute: np=',np,' Awrk(ic)=',Awrk(ic)
             END DO
           END DO
         END DO

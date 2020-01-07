@@ -141,4 +141,14 @@
 # endif
 #endif
 
+
+! XCHEN MMMM
+# if defined BIOLOGY && defined BIO_CSOMIO
+#  include <csomio_mod.h>
+#endif
+! XCHEN WWWW
+
+
+
+
       END MODULE mod_biology

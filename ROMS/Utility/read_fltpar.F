@@ -225,8 +225,8 @@
             DO i=1,Nocmp
               WRITE(out,87) i, RhoOilComp(i)
             ENDDO
-            WRITE (out,88) Nfrls, Fdt1day, Nflt_tot, FlxVoilDay,        &
-     &                     VoilFlt, CWndOil, DfsOil
+            WRITE (out,88) Nfrls, Fdt1day, dstart, Nflt_tot,            &
+     &                      FlxVoilDay, VoilFlt, CWndOil, DfsOil
 ! END DD
 # endif
             WRITE (out,90) ng
@@ -379,8 +379,9 @@
  87   FORMAT(/,5x,'Comp. ',i2.2,2x,'=',2x,f8.2,1x,'kg/m3')
  88   FORMAT(/,1x, 'Floats Released at 1 time=',i5,2x,                  &
      &        'Release TStep, day=',f7.5,/,                             &
+     &        1x,' Start time=',f8.1,/,                                 &
      &        1x,' Total # of floats needed to complete run: ',f8.1,    &
-     &        1x,/,'Oil Vol. Flux =',f8.1,' m3/day',1x,/,               &
+     &        /,1x,'Oil Vol. Flux =',f8.1,' m3/day',1x,/,               &
      &        1x,'Vol.Oil in 1 float=',e12.5,' m3',/,                   &
      &        1x,'Oil wind coeff=',f6.4,' Oil Diff=',f6.3,' m2/s',/,/)
 ! END DD

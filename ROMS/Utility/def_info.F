@@ -3015,6 +3015,19 @@
 # endif
 #endif
 
+! XCHEN MMMM
+! DDMITRY
+#if defined BIOLOGY && defined SOLVE3D && defined BIO_CSOMIO && !defined BIO_OIL
+# include <csomio_def.h>
+#endif
+! XCHEN WWWW
+! DDMITRY
+#if defined BIO_OIL
+# include <csomio_oil_def.h>
+#endif
+! END DD
+
+
 #if defined FLOATS && defined FLOAT_BIOLOGY
 # if defined FLOAT_OYSTER
 #  include <oyster_floats_def.h>

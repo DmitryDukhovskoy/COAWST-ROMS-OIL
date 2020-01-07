@@ -1482,6 +1482,12 @@
 # endif
 #endif
 
+! XCHEN MMMM
+#if defined BIOLOGY && defined SOLVE3D && defined BIO_CSOMIO
+# include <csomio_wrt.h>
+#endif
+! XCHEN WWWW
+
 #if defined FLOATS && defined FLOAT_BIOLOGY
 # if defined FLOAT_OYSTER
 #  include <oyster_floats_wrt.h>

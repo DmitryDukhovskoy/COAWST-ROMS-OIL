@@ -39,8 +39,9 @@
 
 !
 !***********************************************************************
-      SUBROUTINE euler2lagr(ng, tile, Lstr, Lend)
+      SUBROUTINE euler2lagr(ng, tile, Lstr, Lend, ntt)
 !***********************************************************************
+! ntt - time level
 !
       USE mod_param
       USE mod_floats
@@ -51,14 +52,14 @@
 !
 !  Imported variable declarations.
 !
-      integer, intent(in) :: ng, tile, Lstr, Lend
+      integer, intent(in) :: ng, tile, Lstr, Lend, ntt
 !
 !  Local variable declarations.
 !
 # include "tile.h"
 !
       CALL euler2lagr_tile(ng, tile, Lstr, Lend,                        &
-     &                     LBi, UBi, LBj, UBj,                          &
+     &                     LBi, UBi, LBj, UBj, ntt,                     &
      &                     IminS, ImaxS, JminS, JmaxS,                  & 
      &                     OIL3D(ng) % Coil,                            &
      &                     OIL3D(ng) % Coil0,                           &
@@ -78,7 +79,7 @@
 !
 !***********************************************************************
       SUBROUTINE euler2lagr_tile(ng, tile, Lstr, Lend,                  &
-     &                           LBi, UBi, LBj, UBj,                    &
+     &                           LBi, UBi, LBj, UBj, ntt,               &
      &                           IminS, ImaxS, JminS, JmaxS,            &
      &                           Coil1, Coil0, NFLT3D, track,           &
      &                           bounded, wfroil0, szoil0, omn,         & 
@@ -100,7 +101,7 @@
 !  Imported variable declarations
 !
       integer, intent(in) :: ng, tile, Lstr, Lend
-      integer, intent(in) :: LBi, UBi, LBj, UBj
+      integer, intent(in) :: LBi, UBi, LBj, UBj, ntt
       integer, intent(in) :: IminS, ImaxS, JminS, JmaxS
 #ifdef ASSUMED_SHAPE
       real(r8), intent(inout) :: track(:,0:,:)
@@ -185,19 +186,19 @@
       Lindx=0
       DO l=Lstr, Lend
         my_thread(l)=.FALSE.
-        IF ((Xstr.le.track(ixgrd,nfp1(ng),l)).and.                      &
-     &      (track(ixgrd,nfp1(ng),l).lt.Xend).and.                      &
-     &      (Ystr.le.track(iygrd,nfp1(ng),l)).and.                      &
-     &      (track(iygrd,nfp1(ng),l).lt.Yend)) THEN
+        IF ((Xstr.le.track(ixgrd,ntt,l)).and.                           &
+     &      (track(ixgrd,ntt,l).lt.Xend).and.                           &
+     &      (Ystr.le.track(iygrd,ntt,l)).and.                           &
+     &      (track(iygrd,ntt,l).lt.Yend)) THEN
           my_thread(l)=.TRUE.
         ELSE
           CYCLE
         ENDIF
 
         IF (my_thread(l).and.bounded(l)) THEN
-          xflt=track(ixgrd,nfp1(ng),l)
-          yflt=track(iygrd,nfp1(ng),l)
-          zflt=track(izgrd,nfp1(ng),l)
+          xflt=track(ixgrd,ntt,l)
+          yflt=track(iygrd,ntt,l)
+          zflt=track(izgrd,ntt,l)
 !
           i=nint(xflt)
           j=nint(yflt)
@@ -272,8 +273,8 @@
             Nprt_flt=0.0_r8            
             DO il=1,nfgrd          
               l=lfltgrd(il)
-              Doil0(l)=track(isizo,nfp1(ng),l)
-              Rhoil0(l)=track(iroil,nfp1(ng),l)
+              Doil0(l)=track(isizo,ntt,l)
+              Rhoil0(l)=track(iroil,ntt,l)
             ENDDO
 !
 ! For each float in the grid cell
@@ -281,15 +282,15 @@
 !           
             DO il=1,nfgrd
               l=lfltgrd(il)             
-!              tsrfo=track(isrfo,nfp1(ng),l)
+!              tsrfo=track(isrfo,ntt,l)
 !
 ! (1) Update oil weight fraction after different oil components
 ! have been consumed in biology or deposited in sediment modules
 ! Use the constrain that sum(w(ic))=1 to figure out all weights
 !
 !     Weight fraction of oil components SAR+A:
-              wfr0(1)=track(isats,nfp1(ng),l)
-              wfr0(2)=track(iarom,nfp1(ng),l)
+              wfr0(1)=track(isats,ntt,l)
+              wfr0(2)=track(iarom,ntt,l)
               wfr0(3)=1.0_r8-(wfr0(1)+wfr0(2))
 
               wsum=0.0_r8
@@ -299,6 +300,7 @@
                 wfr1(ic)=rr*wfr0(ic)
                 wsum=wsum+wfr1(ic)
               ENDDO
+!
               wfr1=wfr1/wsum
 
               wsum=0.0_r8
@@ -320,8 +322,8 @@
 # endif
 ! Update oil component weight fraction:
 !              IF (tsrfo<1.e-3_r8) THEN
-              track(isats,nfp1(ng),l)=wfr1(1)
-              track(iarom,nfp1(ng),l)=wfr1(2)
+              track(isats,ntt,l)=wfr1(1)
+              track(iarom,ntt,l)=wfr1(2)
 !              ENDIF
 !
 ! Update initial oil component mass fraction 
@@ -349,7 +351,7 @@
               IF (lchck .and. il.eq.ifchck) THEN
                 print*,'eulr2lgr: Rho Oil Comp=',RhoOilComp
                 print*,'eulr2lgr: old rho=',Rhoil0(l),                  &
-     &                 ' newrho=',Rhoil1(l)
+     &                 ' new rho=',Rhoil1(l)
               ENDIF
 # endif
             ENDDO                            ! floats in the grid cell
@@ -431,11 +433,11 @@
 !
             DO il=1,nfgrd
               l=lfltgrd(il)
-!              tsrfo=track(isrfo,nfp1(ng),l)
+!              tsrfo=track(isrfo,ntt,l)
              
 !              IF (tsrfo.lt.1.e-3) THEN
-                track(iroil,nfp1(ng),l)=Rhoil1(l)
-                track(isizo,nfp1(ng),l)=Doil1(l)
+                track(iroil,ntt,l)=Rhoil1(l)
+                track(isizo,ntt,l)=Doil1(l)
 ! 
 ! Update initial oil droplet size for evaporation module
               

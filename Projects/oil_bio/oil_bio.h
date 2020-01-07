@@ -8,8 +8,8 @@
 **
 ** Options for NGOM 1/25 DEG resolution.
 **
-** Application flag:   oil_04
-** Input script:       ocean_oil_04.in
+** Application flag:   oil_bio
+** Input script:       ocean_oil_bio.in
 */
 
 #undef WRF_MODEL
@@ -49,8 +49,10 @@
 #define MIX_S_UV               /*mixing of momentum along constant s surfaces*/
 #define SPLINES_VDIFF
 #define SPLINES_VVISC
-#define TS_U3HADVECTION
-#define TS_C4VADVECTION
+#define UV_U3HADVECTION
+#undef TS_U3HADVECTION
+#define TS_MPDATA
+#undef TS_C4VADVECTION
 #define SOLVE3D
 #define SALINITY
 #define NONLIN_EOS
@@ -75,31 +77,22 @@
 # define RI_SPLINES
 #endif
 
-#undef BIOLLOGY
-#undef BIO_GENOME
-#ifdef BIO_GENOME
+#define BIOLOGY
+#define BIO_CSOMIO
+
+#ifdef BIO_CSOMIO
 # undef ANA_BIOLOGY
-# define ADDZX
-# define CARBON
-# define DENITRIFICATION
-# undef OXYGEN
-# define BIO_SEDIMENT
+# undef CARBON
+# undef DENITRIFICATION
+# define OXYGEN
+# undef BIO_SEDIMENT
 # undef DIAGNOSTICS_BIO
 # define ANA_BPFLUX
 # define ANA_SPFLUX
 #endif
 
-#undef  BIO_FENNEL
-#ifdef BIO_FENNEL
-# define CARBON
-# define DENITRIFICATION
-# define BIO_SEDIMENT
-# define DIAGNOSTICS_BIO
-# define ANA_SPFLUX
-# define ANA_BPFLUX
-#endif
 
-#define SEDIMENT
+#undef SEDIMENT
 #ifdef  SEDIMENT
 # define SUSPLOAD
 # undef  BEDLOAD_SOULSBY
@@ -149,8 +142,11 @@
 #undef WOIL_INTEGRATED
 #define OIL_DEBUG
 #define OIL_MAP_DEBUG
-#define OIL_BIO
-#define OIL_EULR
+#undef OIL_BIO
+#undef OIL_SEDIMENT
+#if defined OIL_BIO || defined OIL_SEDIMENT
+#  define OIL_EULR  /* EULER->/<- Lagrangian mapping */ 
+#endif
 /*
 **-----------------------------------------------------------------------------
 **  Variational Data Assimilation.

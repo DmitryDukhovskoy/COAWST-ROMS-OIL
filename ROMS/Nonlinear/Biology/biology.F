@@ -117,6 +117,10 @@
 #  include <bestnpz.h>
 # elif defined BIO_FENNEL
 #  include <fennel.h>
+# elif defined BIO_CSOMIO && !defined OIL_BIO
+#  include <csomio.h>
+# elif defined OIL_BIO
+#  include <csomio_oil.h>
 # elif defined ESTUARYBGC 
 #  include <estuarybgc.h>
 # elif defined ECOSIM

@@ -2165,6 +2165,22 @@
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+8)=' OXYGEN,'
 #endif
+#if (defined ADDZX && defined BIO_CSOMIO) || defined OIL_BIO
+! XCHEN MMMM
+!
+      IF (Master) WRITE (stdout,20) 'ADDZX',                           &
+     &   'Add zx dynamics.'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+7)=' ADDZX,'
+#endif
+! DDMITRY
+#if defined OIL_BIO
+      IF (Master) WRITE (stdout,20) 'OIL_BIO',                           &
+     &   'Add oil biodegradation.'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+9)=' OIL_BIO,'
+#endif
+! END DD
 #if defined OXYGEN && defined ESTUARYBGC 
 # ifdef OCMIP_OXYGEN_SC
 !

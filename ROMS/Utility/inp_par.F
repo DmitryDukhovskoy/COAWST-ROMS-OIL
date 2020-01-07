@@ -136,6 +136,9 @@
 !!    CALL my_getarg (1, Iname)
       IF (Master) CALL my_getarg (1, Iname)
       CALL mp_bcasts (1, model, Iname)
+! DDMITRY
+      IF (Master) print*,'Iname=',Iname
+! END DD
       OPEN (inp, FILE=TRIM(Iname), FORM='formatted', STATUS='old',      &
      &      ERR=20)
       GO TO 40
