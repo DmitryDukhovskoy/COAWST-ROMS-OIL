@@ -36,8 +36,8 @@
 !cjw---
               CASE ('idTvar(iSat)')
                 idTvar(iSat)=varid
-              CASE ('idTvar(iArom)')
-                idTvar(iArom)=varid
+              CASE ('idTvar(iArmt)')
+                idTvar(iArmt)=varid
               CASE ('idTvar(iResin)')
                 idTvar(iResin)=varid
               CASE ('idTvar(ibg2)')
@@ -85,8 +85,8 @@
 !cjw----
               CASE ('idTads(iSat)')
                 idTads(iSat)=varid
-              CASE ('idTads(iArom)')
-                idTads(iArom)=varid
+              CASE ('idTads(iArmt)')
+                idTads(iArmt)=varid
               CASE ('idTads(iResin)')
                 idTads(iResin)=varid
               CASE ('idTads(ibg2)')
@@ -187,14 +187,14 @@
               CASE ('idTbry(inorth,iSat)')
                 idTbry(inorth,iSat)=varid
 
-              CASE ('idTbry(iwest,iArom)')
-                idTbry(iwest,iArom)=varid
-              CASE ('idTbry(ieast,iArom)')
-                idTbry(ieast,iArom)=varid
-              CASE ('idTbry(isouth,iArom)')
-                idTbry(isouth,iArom)=varid
-              CASE ('idTbry(inorth,iArom)')
-                idTbry(inorth,iArom)=varid
+              CASE ('idTbry(iwest,iArmt)')
+                idTbry(iwest,iArmt)=varid
+              CASE ('idTbry(ieast,iArmt)')
+                idTbry(ieast,iArmt)=varid
+              CASE ('idTbry(isouth,iArmt)')
+                idTbry(isouth,iArmt)=varid
+              CASE ('idTbry(inorth,iArmt)')
+                idTbry(inorth,iArmt)=varid
 
               CASE ('idTbry(iwest,iResin)')
                 idTbry(iwest,iResin)=varid
@@ -302,8 +302,8 @@
 !cjw---
               CASE ('idRtrc(iSat)')
                 idRtrc(iSat)=varid
-              CASE ('idRtrc(iArom)')
-                idRtrc(iArom)=varid
+              CASE ('idRtrc(iArmt)')
+                idRtrc(iArmt)=varid
               CASE ('idRtrc(iResin)')
                 idRtrc(iResin)=varid
               CASE ('idRtrc(ibg2)')

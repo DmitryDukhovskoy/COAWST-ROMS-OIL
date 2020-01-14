@@ -76,7 +76,7 @@
       integer :: iSDeN                  ! Small detritus N-concentration
 !cjw--
       integer :: iSat
-      integer :: iArom
+      integer :: iArmt
       integer :: iResin
       integer :: ibg2
       integer :: ibg3
@@ -470,7 +470,7 @@
       iLDeN=ic+6
       iSDeN=ic+7
       iSat=ic+8
-      iArom=ic+9
+      iArmt=ic+9
       iResin=ic+10
       ibg2=ic+11
       ibg3=ic+12

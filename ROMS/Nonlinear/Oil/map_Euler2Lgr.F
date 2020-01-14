@@ -444,15 +444,15 @@
                 szoil0(l)=Doil1(l)
 !              ENDIF
 !
-!# ifdef OIL_MAP_DEBUG
-!              IF (il.eq.ifchck) THEN
-!                print*,'l=',l,'Rhoil1=',Rhoil1(l),'Doil1=',Doil1(l)
-!                print*,'eulr2lagr: iroil,nf=',track(iroil,nf(ng),l),    &
-!     &                 ' iroil,nfp1=',track(iroil,nfp1,l)
-!                print*,'eulr2lagr: isizo,nf=',track(isizo,nf(ng),l),    & 
-!     &                 'isizo,nfp1=',track(isizo,nfp1(ng),l)
-!              ENDIF
-!# endif
+# ifdef OIL_MAP_DEBUG
+              IF (il.eq.ifchck) THEN
+                print*,'l=',l,'Rhoil1=',Rhoil1(l),'Doil1=',Doil1(l)
+                print*,'eulr2lagr: iroil,nf=',track(iroil,nf(ng),l),    &
+     &                 ' iroil,nfp1=',track(iroil,nfp1,l)
+                print*,'eulr2lagr: isizo,nf=',track(isizo,nf(ng),l),    & 
+     &                 'isizo,nfp1=',track(isizo,nfp1(ng),l)
+              ENDIF
+# endif
             ENDDO
 
 

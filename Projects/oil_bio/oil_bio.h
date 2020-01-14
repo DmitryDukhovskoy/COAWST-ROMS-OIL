@@ -142,10 +142,14 @@
 #undef WOIL_INTEGRATED
 #define OIL_DEBUG
 #define OIL_MAP_DEBUG
-#undef OIL_BIO
+#define OIL_BIO
+#undef OIL_BIO_DEBUG
 #undef OIL_SEDIMENT
 #if defined OIL_BIO || defined OIL_SEDIMENT
 #  define OIL_EULR  /* EULER->/<- Lagrangian mapping */ 
+#endif
+#if undefined OIL_BIO
+#  undef OIL_BIO_DEBUG
 #endif
 /*
 **-----------------------------------------------------------------------------

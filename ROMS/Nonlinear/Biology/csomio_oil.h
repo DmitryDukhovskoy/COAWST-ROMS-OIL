@@ -67,11 +67,7 @@
 !      ocean: Simulations for the Northwest North Atlantic.            !
 !      Geophys. Res. Letters 35, L24608, doi:10.1029/2008GL036147.     !
 !                                                                      !
-! DDMITRY: added oil concentration fields from OIL FLOATS              !
-!    mapped on Eulerian fixed grid                                     !
-!    oil components are consumed by microbes                           !
-!  All ADDOIL and OILBUGS definitions are turned off as this           !
-!  code is activated only when OIL_BIO is defined                      !
+!  Version coupled with oil model D.Dukhovskoy                         !
 !                                                                      !
 !***********************************************************************
 !
@@ -84,7 +80,7 @@
       USE mod_ncparam
       USE mod_ocean
       USE mod_stepping
-      USE mod_oil_Eulvar
+      USE mod_oil_Eulvar  ! DDMITRY
 !
       implicit none
 !
@@ -141,7 +137,7 @@
      &                   DIAGS(ng) % DiaBio3d,                          &
 #endif
      &                   OCEAN(ng) % t,                                 &
-     &                   OIL3D(ng) % Coil)
+     &                   OIL3D(ng) % Coil)                  ! DDMITRY
 
 #ifdef PROFILE
       CALL wclock_off (ng, iNLM, 15, __LINE__, __FILE__)
@@ -176,7 +172,7 @@
      &                         DiaBio2d, DiaBio3d,                      &
 #endif
      &                         t,                                       &
-     &                         Coil)    
+     &                         Coil)                            !  DDMITRY
 !-----------------------------------------------------------------------
 !
       USE mod_param
@@ -185,10 +181,11 @@
       USE mod_scalars
 !
       USE dateclock_mod, ONLY : caldate
-      USE mod_floats                  
- 
+      USE mod_floats      ! DDMITRY
+      USE mod_parallel    ! DDMITRY
+
       implicit none
- 
+
 !
 !  Imported variable declarations.
 !
@@ -263,18 +260,14 @@
 !
 !  Local variable declarations.
 !
-
-!XCHEN ADDOIL MMMM20
-! DDMITRY - ADDOIL eliminated, option for OIL_BIO 
-      integer, parameter :: Nsink = 9
-#ifndef CARBON
-      integer, parameter :: Nsink = 7 
+#ifdef CARBON
+      integer, parameter :: Nsink = 6
+#else
+      integer, parameter :: Nsink = 7
 #endif
-! END DD
-!XCHEN ADDOIL WWWW
 
       integer :: Iter, i, ibio, isink, itrc, ivar, j, k, ks
-      integer :: ic                             ! DDMITRY 
+      integer :: ic                             ! DDMITRY
       integer, dimension(Nsink) :: idsink
 
       real(r8), parameter :: eps = 1.0e-20_r8
@@ -298,14 +291,8 @@
       real(r8), parameter :: rOxNH4= 6.625_r8       ! 106/16
       real(r8) :: l2mol = 1000.0_r8/22.3916_r8      ! liter to mol
 #endif
-! XCHEN MMMM
-#ifdef ADDZX
-      real(r8), parameter :: para_zx = 1.0_r8
-#endif
-! XCHEN WWWW
 !
-
-! DDMITRY 
+! DDMITRY
 ! molecular weight for oil components (g/mole) for conversion
 ! kg/m3 -> mmole/m3
 ! Assuming Saturates are C10H22
@@ -314,7 +301,6 @@
 ! The array should have Nocmp elements to match
 ! the number of oil components
       real(r8), parameter :: wmole(3) = (/ 142.286, 92.141, 412.746 /)
-!      real(r8) :: wmole(Nocmp)
 ! END DD
 
 #ifdef CARBON
@@ -351,54 +337,23 @@
       real(r8) :: Att, AttFac, ExpAtt, Itop, PAR
       real(r8) :: Epp, L_NH4, L_NO3, LTOT, Vp
       real(r8) :: Chl2C, dtdays, t_PPmax, inhNH4
-
+!cjw---
+      real(r8) :: L_S, L_A, L_R
+      real(r8) :: t_EEmax_S, t_EEmax_A, t_EEmax_R
+      real(r8) :: grmax2,grmax3,grmax4
+      real(r8) :: Vp2,Vp3,Vp4
+      real(r8) :: cff12,cff13,cff14,cff22,cff23,cff24
+      real(r8) :: cff32,cff33,cff34,cff42,cff43,cff44
+      real(r8) :: cff52,cff53,cff54
+      real(r8) :: cff452,cff453,cff454
+      real(r8) :: cff122,cff123,cff124
+      real(r8) :: fac12,fac13,fac14
+!cjw---
       real(r8) :: cff, cff1, cff2, cff3, cff4, cff5
       real(r8) :: fac1, fac2, fac3
       real(r8) :: cffL, cffR, cu, dltL, dltR
 
       real(r8) :: total_N
-
-!CHEN ADDOIL MMMM17
-!#ifdef ADDOIL  DDMITRY
-      real(r8) :: coo1, coo2, coo3, coo5
-      real(r8) :: faco1, faco2, faco3
-      real(r8) :: N_Flux_CoagSBUG1
-      real(r8) :: N_Flux_CoagD_SBUG1 
-      real(r8) :: N_Flux_SBUG1mortal
-      real(r8) :: N_Flux_LBUG1mortal
-      real(r8) :: N_Flux_LBUG1excret
-      real(r8) :: N_Flux_LBUG1metabo
-      real(r8) :: SAT_Flux_RegProd
-      real(r8) :: SBUG1_Flux_Assim 
-      real(r8) :: SBUG1_Flux_Egest
-
-      real(r8) :: caa1, caa2, caa3, caa5
-      real(r8) :: faca1, faca2, faca3
-      real(r8) :: N_Flux_CoagSBUG2
-      real(r8) :: N_Flux_CoagD_SBUG2 
-      real(r8) :: N_Flux_SBUG2mortal
-      real(r8) :: N_Flux_LBUG2mortal
-      real(r8) :: N_Flux_LBUG2excret
-      real(r8) :: N_Flux_LBUG2metabo
-      real(r8) :: AROM_Flux_RegProd
-      real(r8) :: SBUG2_Flux_Assim 
-      real(r8) :: SBUG2_Flux_Egest
-
-      real(r8) :: cbb1, cbb2, cbb3, cbb5
-      real(r8) :: facb1, facb2, facb3
-      real(r8) :: N_Flux_CoagSBUG3
-      real(r8) :: N_Flux_CoagD_SBUG3 
-      real(r8) :: N_Flux_SBUG3mortal
-      real(r8) :: N_Flux_LBUG3mortal
-      real(r8) :: N_Flux_LBUG3excret
-      real(r8) :: N_Flux_LBUG3metabo
-      real(r8) :: RESIN_Flux_RegProd
-      real(r8) :: SBUG3_Flux_Assim 
-      real(r8) :: SBUG3_Flux_Egest
-!#endif  DDMITRY
-!XCHEN ADDOIL WWWW
-
-
 
 #ifdef DIAGNOSTICS_BIO
       real(r8) :: fiter
@@ -422,7 +377,19 @@
       real(r8) :: N_Flux_Pmortal, N_Flux_Zmortal
       real(r8) :: N_Flux_RemineL, N_Flux_RemineS
       real(r8) :: N_Flux_Zexcret, N_Flux_Zmetabo
-
+!cjw---
+      real(r8) :: N_Flux_Assim_2,N_Flux_Assim_3,N_Flux_Assim_4
+      real(r8) :: N_Flux_Egest_2,N_Flux_Egest_3,N_Flux_Egest_4
+      real(r8) :: N_Flux_CoagD2, N_Flux_CoagB2
+      real(r8) :: N_Flux_CoagD3, N_Flux_CoagB3
+      real(r8) :: N_Flux_CoagD4, N_Flux_CoagB4
+      real(r8) :: N_Flux_NewProd_2, N_Flux_RegProd_2
+      real(r8) :: N_Flux_NewProd_3, N_Flux_RegProd_3
+      real(r8) :: N_Flux_NewProd_4, N_Flux_RegProd_4
+      real(r8) :: C_Flux_bg2,C_Flux_bg3,C_Flux_bg4
+      real(r8) :: N_Flux_Pmortal_2, N_Flux_Pmortal_3
+      real(r8) :: N_Flux_Pmortal_4
+!cjw---
       real(r8), dimension(Nsink) :: Wbio
 
       integer, dimension(IminS:ImaxS,N(ng)) :: ksource
@@ -434,7 +401,9 @@
 
       real(r8), dimension(IminS:ImaxS,N(ng),NT(ng)) :: Bio
       real(r8), dimension(IminS:ImaxS,N(ng),NT(ng)) :: Bio_old
-
+!cjw---
+      real(r8), dimension(NT(ng)) :: biotmp
+!cjw---
       real(r8), dimension(IminS:ImaxS,0:N(ng)) :: FC
 
       real(r8), dimension(IminS:ImaxS,N(ng)) :: Hz_inv
@@ -447,8 +416,18 @@
       real(r8), dimension(IminS:ImaxS,N(ng)) :: qc
 
 ! DDMITRY
-      real(r8) :: Coil_mmole(IminS:ImaxS,JminS:JmaxS,N(ng),Nocmp) ! Oil conc in mmole/m3 by components
+      integer :: iOil(3)
+      integer :: ip0, jp0, kp0
+
+      real(r8) :: Coil_mmole(IminS:ImaxS,JminS:JmaxS,N(ng),Nocmp) ! Oil
+      real(r8) :: rOil(IminS:ImaxS,JminS:JmaxS,N(ng),Nocmp)   ! fraction
+                                                              ! of plume oil in overall 
+                                                              ! oil concentration in a grid cell
+      real(r8) :: coil_new           ! conc in mmole/m3 by components
+
+!      logical :: lprnt
 ! END DD
+
 #include "set_bounds.h"
 #ifdef DIAGNOSTICS_BIO
 !
@@ -504,20 +483,14 @@
       idsink(2)=iChlo
       idsink(3)=iSDeN
       idsink(4)=iLDeN
-
-! DDMITRY
-#if defined CARBON
-      idsink(5)=iSDeC
-      idsink(6)=iLDeC
-      idsink(7)=iSbug1
-      idsink(8)=iSbug2
-      idsink(9)=iSbug3
-#else
-      idsink(5)=iSbug1
-      idsink(6)=iSbug2
-      idsink(7)=iSbug3
+!cjw---
+      idsink(5)=ibg2
+      idsink(6)=ibg3
+      idsink(7)=ibg4
+#ifdef CARBON
+      idsink(8)=iSDeC
+      idsink(9)=iLDeC
 #endif
-
 !
 !  Set vertical sinking velocity vector in the same order as the
 !  identification vector, IDSINK.
@@ -526,39 +499,48 @@
       Wbio(2)=wPhy(ng)                ! chlorophyll
       Wbio(3)=wSDet(ng)               ! small Nitrogen-detritus
       Wbio(4)=wLDet(ng)               ! large Nitrogen-detritus
-
-! DDMITRY
-#if defined CARBON 
-      Wbio(5)=wSDet(ng)               ! small Carbon-detritus
-      Wbio(6)=wLDet(ng)               ! large Carbon-detritus
-      Wbio(7)=wPhy(ng)                ! 1st Oil eater
-      Wbio(8)=wPhy(ng)                ! 2nd Oil eater
-      Wbio(8)=wPhy(ng)                ! 3rd Oil eater
-#else
-      Wbio(5)=wPhy(ng)                ! 1st Oil eater
-      Wbio(6)=wPhy(ng)                ! 2nd Oil eater
-      Wbio(7)=wPhy(ng)                ! 3rd Oil eater
+!cjw---
+      Wbio(5)=wPhy(ng)
+      Wbio(6)=wPhy(ng)
+      Wbio(7)=wPhy(ng)
+#ifdef CARBON
+      Wbio(8)=wSDet(ng)               ! small Carbon-detritus
+      Wbio(9)=wLDet(ng)               ! large Carbon-detritus
 #endif
-! END DD
-!
-!
 ! DDMITRY
 ! Convert oil concentration from kg/m3 -> mmole/m3
 !
+#ifdef OIL_BIO_DEBUG
+!      lprnt=.false.
+      ip0=-1
+      jp0=-1
+      kp0=-1
+#endif
       DO k=1,N(ng)
         DO j=Jstr,Jend
           DO i=Istr,Iend
             DO ic=1,Nocmp
               Coil_mmole(i,j,k,ic)=Coil(i,j,k,ic)/wmole(ic)*1.e6_r8
+#ifdef OIL_BIO_DEBUG
+              IF (Coil(i,j,k,1).gt.1.e-6 .and. ip0.lt.0) THEN
+                ip0=i
+                jp0=j
+                kp0=k
+                print*,'XXX k=',k,'j=',j,' i=',i,' Coil=',Coil(i,j,k,ic)
+                print*,'XXX Coil_mmole=',Coil_mmole(i,j,k,ic)
+!                lprnt=.true.
+              ENDIF
+#endif
             ENDDO
           ENDDO
         ENDDO
       ENDDO
 
+      iOil(1)=iSat
+      iOil(2)=iArmt
+      iOil(3)=iResin
+!      IF (Master) print*,'XXXX iOil=',iOil
 ! END DD
-       
-
-
 
 !
 !  Compute inverse thickness to avoid repeated divisions.
@@ -596,6 +578,41 @@
             END DO
           END DO
         END DO
+
+! DDMITRY
+! Combine background oil concentration and oil plume model info
+! Note that for now the number of oil components is fixed to =3
+! whereas OIL model allows any number of components nocmp
+! make sure that for biology nocmp=3 and 1 corresponds to Saturates
+! 2 - Aromatics, 3- resins
+        DO k=1,N(ng)
+          DO i=Istr,Iend
+            DO ic=1,Nocmp
+
+#ifdef OIL_BIO_DEBUG
+              IF (i.eq.ip0 .and. k.eq.kp0 .and. j.eq.jp0) THEN
+                print*,'XXX 1.Bio=',Bio(i,k,iOil(ic)),'OilModel=',      &
+     &                 Coil_mmole(i,j,k,ic),'indx=',iOil(ic)
+              ENDIF
+#endif
+              Bio(i,k,iOil(ic))=Bio(i,k,iOil(ic))+Coil_mmole(i,j,k,ic)
+              IF (Bio(i,k,iOil(ic)).gt.1.e-100_r8) THEN
+                rOil(i,j,k,ic)=Coil_mmole(i,j,k,ic)/Bio(i,k,iOil(ic))
+              ELSE
+                rOil(i,j,k,ic)=1.0_r8
+              ENDIF
+
+#ifdef OIL_BIO_DEBUG
+              IF (i.eq.ip0 .and. k.eq.kp0 .and. j.eq.jp0) THEN
+                print*,'XXX Bio=',Bio(i,k,iOil(ic)),                    &
+     &               'rOil=',rOil(i,j,k,ic)
+              ENDIF
+#endif
+
+            ENDDO
+          ENDDO
+        ENDDO
+! END DD
 #ifdef CARBON
         DO k=1,N(ng)
           DO i=Istr,Iend
@@ -622,7 +639,6 @@
         DO i=Istr,Iend
           PARsur(i)=PARfrac(ng)*srflx(i,j)*rho0*Cp
         END DO
-
 !
 !=======================================================================
 !  Start internal iterations to achieve convergence of the nonlinear
@@ -699,18 +715,9 @@
           DO i=Istr,Iend
             PAR=PARsur(i)
             AttFac=0.0_r8
-! ====================
-! DDMITRY
-!  TEMPORARY FIX for missing Bio(:,:,iSbug1-3) information
-!  that is supposed to come from the input file oil_bio_ini.nc
-!  will need to be deleted after the input is fixed
-!            DO k=N(ng),1,-1
-!              IF (Bio(i,k,iSbug1).lt.1.e-20) Bio(i,k,iSbug1)=0.02_r8
-!              IF (Bio(i,k,iSbug2).lt.1.e-20) Bio(i,k,iSbug2)=0.03_r8
-!              IF (Bio(i,k,iSbug3).lt.1.e-20) Bio(i,k,iSbug3)=0.04_r8
-!            ENDDO
-!  END DD
-!
+            grmax2=(1.5_r8+(szbg2(ng)**0.40_r8))*gnp2(ng)
+            grmax3=(1.5_r8+(szbg3(ng)**0.40_r8))*gnp3(ng)
+            grmax4=(1.5_r8+(szbg4(ng)**0.40_r8))*gnp4(ng)
             IF (PARsur(i).gt.0.0_r8) THEN
               DO k=N(ng),1,-1
 !
@@ -735,12 +742,34 @@
 !  Temperature-limited and light-limited growth rate (Eppley, R.W.,
 !  1972, Fishery Bulletin, 70: 1063-1085; here 0.59=ln(2)*0.851).
 !  Check value for Vp is 2.9124317 at 19.25 degC.
-!
+!cjw--- Vp is max growth rate
                 Vp=Vp0(ng)*0.59_r8*(1.066_r8**Bio(i,k,itemp))
                 fac1=PAR*PhyIS(ng)
                 Epp=Vp/SQRT(Vp*Vp+fac1*fac1)
                 t_PPmax=Epp*fac1
-!
+!cjw---add three more
+!                grmax2=(5.0_r8+(szbg2(ng)**0.40_r8))*gnp2(ng)
+!               IF(Bio(i,k,itemp) .gt. 15.0_r8) THEN
+                Vp2=Vp1(ng)*grmax2*(1.066_r8**Bio(i,k,itemp))
+                Vp3=Vp1(ng)*grmax3*(1.066_r8**Bio(i,k,itemp))
+                Vp4=Vp1(ng)*grmax4*(1.066_r8**Bio(i,k,itemp))
+!               ELSE
+!                Vp2=Vp1(ng)*grmax2*(1.066_r8**Bio(i,k,itemp))
+!                Vp3=Vp1(ng)*grmax3*(1.066_r8**Bio(i,k,itemp))
+!                Vp4=Vp1(ng)*grmax4*(1.066_r8**Bio(i,k,itemp))
+!               END IF
+                t_EEmax_S = Vp2*econsta_S(ng)
+
+!                grmax3=(5.0_r8+(szbg3(ng)**0.40_r8))*gnp3(ng)
+!                Vp3=Vp1(ng)*grmax3*(1.066_r8**Bio(i,k,itemp))
+                t_EEmax_A = Vp3*econsta_A(ng)
+
+!                grmax4=(5.0_r8+(szbg4(ng)**0.40_r8))*gnp4(ng)
+!                Vp4=Vp1(ng)*grmax4*(1.066_r8**Bio(i,k,itemp))
+                t_EEmax_R = Vp4*econsta_R(ng)
+
+!                print*, 't_EEmax=', t_EEmax_S, t_EEmax_A, t_EEmax_R
+!cjw---
 !  Nutrient-limitation terms (Parker 1993 Ecol Mod., 66, 113-120).
 !
                 cff1=Bio(i,k,iNH4_)*K_NH4(ng)
@@ -749,45 +778,21 @@
                 L_NH4=cff1/(1.0_r8+cff1)
                 L_NO3=cff2*inhNH4/(1.0_r8+cff2)
                 LTOT=L_NO3+L_NH4
+!
+!cjw--- energy limitation terms
+!
+               cff122=Bio(i,k,iSat)*K_Sat(ng)
+               cff123=Bio(i,k,iArmt)*K_Arom(ng)
+               cff124=Bio(i,k,iResin)*K_Resin(ng)
+                L_S=cff122/(1.0_r8+cff122)
+                L_A=cff123/(1.0_r8+cff123)
+                L_R=cff124/(1.0_r8+cff124)
+!cjw---
 
-!XCHEN ADDOIL MMMM1
-                ! Limitation of SAT oil
-! DDMITRY - oil concentration by components
-! DDMITRY - read oil concentration from 4D array
-! passed from the Lagr oil float and mapped onto
-! Eulerian frame
-! For now, the number of components is set 3 
-! this needs to be changes to a variable # of oil components
-! Nocmp
-!                DO ic=1,Nocmp
-                
-                coo1=Coil_mmole(i,j,k,1)*K_SAT(ng)
-                caa1=Coil_mmole(i,j,k,2)*K_AROM(ng)
-                cbb1=Coil_mmole(i,j,k,3)*K_RESIN(ng)
-! END DD
-!XCHEN ADDOIL WWWW
-
-# ifdef OIL_DEBUG
-! DDMITRY
-                IF (i.eq.141 .and. j.eq.78 .and. k.eq.4) THEN
-                  print*,'PARsur=',PARsur(i), 'BIO: i=',i,              &
-                       'j=',j,'k=',k, 'nstp=',nstp
-!     &          'iSbug1=', iSbug1, 'iSbug2=', iSbug2, 'iSbug3=', iSbug3
-                  print*,'Bio1=',Bio(i,k,iSbug1),                       & 
-     &                   'Bio2=',Bio(i,k,iSbug2),                       &
-     &                   'Bio3=',Bio(i,k,iSbug3)
-                  print*,'Coil Sat=',Coil(i,j,k,1),                     &
-     &                   'Arm=',Coil(i,j,k,2),                     &
-     &                   'Rsn=',Coil(i,j,k,3)
-                  print*,'Coil mmole/m3 Sat=',Coil_mmole(i,j,k,1),      &
-     &                   'Arm=',Coil_mmole(i,j,k,2),                    &
-     &                   'Rsn=',Coil_mmole(i,j,k,3)
-               ENDIF
-! END DD
-# endif
 !
 !  Nitrate and ammonium uptake by Phytoplankton.
 !
+
                 fac1=dtdays*t_PPmax
                 cff4=fac1*K_NO3(ng)*inhNH4/(1.0_r8+cff2)*Bio(i,k,iPhyt)
                 cff5=fac1*K_NH4(ng)/(1.0_r8+cff1)*Bio(i,k,iPhyt)
@@ -797,42 +802,76 @@
                 N_Flux_RegProd=Bio(i,k,iNH4_)*cff5
                 Bio(i,k,iPhyt)=Bio(i,k,iPhyt)+                          &
      &                         N_Flux_NewProd+N_Flux_RegProd
+
+!cjw---
+
+                fac12=dtdays*t_EEmax_S
+                fac13=dtdays*t_EEmax_A
+                fac14=dtdays*t_EEmax_R
+ 
+                cff452=fac12*1.16_r8*                                   &
+      &                K_Sat(ng)/(1.0_r8+cff122)*Bio(i,k,ibg2)
+                cff453=fac13*1.96_r8*                                   &
+      &                K_Arom(ng)/(1.0_r8+cff123)*Bio(i,k,ibg3)
+                cff454=fac14*0.42_r8*                                   &
+      &                K_Resin(ng)/(1.0_r8+cff124)*Bio(i,k,ibg4)
+                                 
+                biotmp(iSat)=Bio(i,k,iSat)
+                biotmp(iArmt)=Bio(i,k,iArmt)
+                biotmp(iResin)=Bio(i,k,iResin)
+
+                Bio(i,k,iSat)=Bio(i,k,iSat)/(1.0_r8+cff452)
+                Bio(i,k,iArmt)=Bio(i,k,iArmt)/(1.0_r8+cff453)
+                Bio(i,k,iResin)=Bio(i,k,iResin)/(1.0_r8+cff454)
+
+                                 
+                cff42=fac12*K_NO3(ng)*inhNH4/(1.0_r8+cff2)               &
+      &               *L_S*Bio(i,k,ibg2)
+                cff43=fac13*K_NO3(ng)*inhNH4/(1.0_r8+cff2)               &
+      &               *L_A*Bio(i,k,ibg3)
+                cff44=fac14*K_NO3(ng)*inhNH4/(1.0_r8+cff2)               &
+      &               *L_R*Bio(i,k,ibg4)
+                                 
+                cff52=fac12*K_NH4(ng)/(1.0_r8+cff1)*L_S*Bio(i,k,ibg2)
+                cff53=fac13*K_NH4(ng)/(1.0_r8+cff1)*L_A*Bio(i,k,ibg3)
+                cff54=fac14*K_NH4(ng)/(1.0_r8+cff1)*L_R*Bio(i,k,ibg4)
+
+!cjw Bug2 - saturated hyrocarbon
+                Bio(i,k,iNO3_)=Bio(i,k,iNO3_)/(1.0_r8+cff42)
+                Bio(i,k,iNH4_)=Bio(i,k,iNH4_)/(1.0_r8+cff52)
+                N_Flux_NewProd_2=Bio(i,k,iNO3_)*cff42
+                N_Flux_RegProd_2=Bio(i,k,iNH4_)*cff52
+!cjw Bug3 - aromatic hyrocarbon
+                Bio(i,k,iNO3_)=Bio(i,k,iNO3_)/(1.0_r8+cff43)
+                Bio(i,k,iNH4_)=Bio(i,k,iNH4_)/(1.0_r8+cff53)
+                N_Flux_NewProd_3=Bio(i,k,iNO3_)*cff43
+                N_Flux_RegProd_3=Bio(i,k,iNH4_)*cff53
+!cjw Bug4 - resin hyrocarbon
+                Bio(i,k,iNO3_)=Bio(i,k,iNO3_)/(1.0_r8+cff44)
+                Bio(i,k,iNH4_)=Bio(i,k,iNH4_)/(1.0_r8+cff54)
+                N_Flux_NewProd_4=Bio(i,k,iNO3_)*cff44
+                N_Flux_RegProd_4=Bio(i,k,iNH4_)*cff54
 !
+!cjw--- Return store carbon uptake for oxygen calculation - co2 prod
+!
+                C_Flux_bg2=biotmp(iSat)-Bio(i,k,iSat)
+                C_Flux_bg3=biotmp(iArmt)-Bio(i,k,iArmt)
+                C_Flux_bg4=biotmp(iResin)-Bio(i,k,iResin)
+!                print*, 'C_flux=',C_Flux_bg2, C_Flux_bg3,C_Flux_bg4
+!
+!cjw--- Grow bacteria
+                Bio(i,k,ibg2)=Bio(i,k,ibg2)+                            &
+     &                         N_Flux_NewProd_2+N_Flux_RegProd_2
+                Bio(i,k,ibg3)=Bio(i,k,ibg3)+                            &
+     &                         N_Flux_NewProd_3+N_Flux_RegProd_3
+                Bio(i,k,ibg4)=Bio(i,k,ibg4)+                            &
+     &                         N_Flux_NewProd_4+N_Flux_RegProd_4
+!            END IF
+!cjw---
                 Bio(i,k,iChlo)=Bio(i,k,iChlo)+                          &
      &                         (dtdays*t_PPmax*t_PPmax*LTOT*LTOT*       &
      &                          Chl2C_m(ng)*Bio(i,k,iChlo))/            &
      &                         (PhyIS(ng)*MAX(Chl2C,eps)*PAR+eps)
-
-!XCHEN ADDOIL MMMM2
-! DDMITRY
-                ! sbug1 uptake oil, sbug1 grow
-                faco1=dtdays  !*t_PPmax
-                coo5=faco1*K_SAT(ng)/(1.0_r8+coo1)*Bio(i,k,iSbug1) 
-                Coil_mmole(i,j,k,1)=Coil_mmole(i,j,k,1)/(1.0_r8+coo5)  ! DDMITRY
-                SAT_Flux_RegProd=Coil_mmole(i,j,k,1)*coo5 ! DDMITRY
-                Bio(i,k,iSbug1)=Bio(i,k,iSbug1) + SAT_Flux_RegProd
-
-                ! sbug2 uptake oil, sbug2 grow
-                faca1=dtdays  !*t_PPmax
-                caa5=faca1*K_AROM(ng)/(1.0_r8+caa1)*Bio(i,k,iSbug2)
-                Coil_mmole(i,j,k,2)=Coil_mmole(i,j,k,2)/(1.0_r8+caa5) ! DDMITRY
-                AROM_Flux_RegProd=Coil_mmole(i,j,k,2)*caa5*             &
-     &                            (16.0_r8/106.0_r8)*10.0_r8    ! DDMITRY
-                                !N:C=16:106, 1 sat oil contain 10 C
-                Bio(i,k,iSbug2)=Bio(i,k,iSbug2) + AROM_Flux_RegProd
-
-                ! sbug3 uptake oil, sbug3 grow
-                facb1=dtdays  !*t_PPmax
-                cbb5=facb1*K_RESIN(ng)/(1.0_r8+cbb1)*Bio(i,k,iSbug3)
-                Coil_mmole(i,j,k,3)=Coil_mmole(i,j,k,3)/(1.0_r8+cbb5)   ! DDMITRY
-                RESIN_Flux_RegProd=Coil_mmole(i,j,k,3)*cbb5*            &
-     &                             (16._r8/106._r8)*10._r8  ! DDMITRY
-                                !N:C=16:106, 1 sat oil contain 10 C
-                Bio(i,k,iSbug3)=Bio(i,k,iSbug3) + RESIN_Flux_RegProd
-! END DD
-!XCHEN ADDOIL WWWW
-
-
 #ifdef DIAGNOSTICS_BIO
                 DiaBio3d(i,j,k,iPPro)=DiaBio3d(i,j,k,iPPro)+            &
 # ifdef WET_DRY
@@ -892,16 +931,23 @@
                 N_Flux_Nitrifi=Bio(i,k,iNH4_)*cff3
                 Bio(i,k,iNO3_)=Bio(i,k,iNO3_)+N_Flux_Nitrifi
 #ifdef OXYGEN
-                Bio(i,k,iOxyg)=Bio(i,k,iOxyg)-2.0_r8*N_Flux_Nitrifi
+!                Bio(i,k,iOxyg)=Bio(i,k,iOxyg)-2.0_r8*N_Flux_Nitrifi
+!cjw---
+!
+! The conversion of oil to co2
+!
+!         saturated+ + O2  ==> CO2 + H2O;
+!         alkane  +  O2 ==> CO2 + H2O  ;
+!         resin  +  O2 ==> CO2 + H2O  ;
+!
+! Assume average electron donor concentrations for these substrates.
+!
+                Bio(i,k,iOxyg)=Bio(i,k,iOxyg)-2.0_r8*N_Flux_Nitrifi-     &
+    &               2.65_r8*10.0_r8*C_Flux_bg2-                          &
+    &               1.8571_r8*7.0_r8*C_Flux_bg3-                         &
+    &               2.3_r8*30.0_r8*C_Flux_bg4
+!               print*,'oxygen=',Bio(i,k,iOxyg)
 #endif
-
-!XCHEN ADDOIL MMMM3
-!#ifdef ADDOIL  DDMITRY
-#ifdef OIL_BIO
-!Oxygen Comsumption
-#endif
-!XCHEN ADDOIL WWWW
-
 #if defined CARBON && defined TALK_NONCONSERV
                 Bio(i,k,iTAlk)=Bio(i,k,iTAlk)-N_Flux_Nitrifi
 #endif
@@ -913,80 +959,142 @@
               END DO
 !
 !  If PARsur=0, nitrification occurs at the maximum rate (NitriR).
-!
+!cjw--- ???
             ELSE
               cff3=dtdays*NitriR(ng)
               DO k=N(ng),1,-1
+!
+!cjw---
+!  Temperature-limited and light-limited growth rate (Eppley, R.W.,
+!  1972, Fishery Bulletin, 70: 1063-1085; here 0.59=ln(2)*0.851).
+!  Check value for Vp is 2.9124317 at 19.25 degC.
+! Vp is the maximum growth rate limited by temp, and oil bug use mu0=0.9
+! phyto use mu0=0.59
+
+!                grmax2=(5.0_r8+(szbg2(ng)**0.40_r8))*gnp2(ng)
+                Vp2=Vp1(ng)*grmax2*(1.066_r8**Bio(i,k,itemp))
+                t_EEmax_S = Vp2*econsta_S(ng)
+
+!                grmax3=(5.0_r8+(szbg3(ng)**0.40_r8))*gnp3(ng)
+                Vp3=Vp1(ng)*grmax3*(1.066_r8**Bio(i,k,itemp))
+                t_EEmax_A = Vp3*econsta_A(ng)
+
+!                grmax4=(5.0_r8+(szbg4(ng)**0.40_r8))*gnp4(ng)
+                Vp4=Vp1(ng)*grmax4*(1.066_r8**Bio(i,k,itemp))
+                t_EEmax_R = Vp4*econsta_R(ng)
+!
+!nutrient limitation
+!
+               cff1=Bio(i,k,iNH4_)*K_NH4(ng)
+               cff2=Bio(i,k,iNO3_)*K_NO3(ng)
+               inhNH4=1.0_r8/(1.0_r8+cff1)
+               L_NH4=cff1/(1.0_r8+cff1)
+               L_NO3=cff2*inhNH4/(1.0_r8+cff2)
+!
+!cjw--- energy limitation terms
+!
+               cff122=Bio(i,k,iSat)*K_Sat(ng)
+               cff123=Bio(i,k,iArmt)*K_Arom(ng)
+               cff124=Bio(i,k,iResin)*K_Resin(ng)
+                L_S=cff122/(1.0_r8+cff122)
+                L_A=cff123/(1.0_r8+cff123)
+                L_R=cff124/(1.0_r8+cff124)
+            
+!cjw--- nutrient and energy uptake by bacteria
+                fac12=dtdays*t_EEmax_S
+                fac13=dtdays*t_EEmax_A
+                fac14=dtdays*t_EEmax_R
+!cjw--inverse of gibbs yield
+               cff452=fac12*1.16_r8*                                   &
+      &               K_Sat(ng)/(1.0_r8+cff122)*Bio(i,k,ibg2)
+               cff453=fac13*1.96_r8*                                   &
+      &               K_Arom(ng)/(1.0_r8+cff123)*Bio(i,k,ibg3)
+               cff454=fac14*0.42_r8*                                   &
+      &               K_Resin(ng)/(1.0_r8+cff124)*Bio(i,k,ibg4)
+                                 
+                biotmp(iSat)=Bio(i,k,iSat)
+                biotmp(iArmt)=Bio(i,k,iArmt)
+                biotmp(iResin)=Bio(i,k,iResin)
+                                 
+                Bio(i,k,iSat)=Bio(i,k,iSat)/(1.0_r8+cff452)
+                Bio(i,k,iArmt)=Bio(i,k,iArmt)/(1.0_r8+cff453)
+                Bio(i,k,iResin)=Bio(i,k,iResin)/(1.0_r8+cff454)
+
+                                 
+                cff42=fac12*K_NO3(ng)*inhNH4/(1.0_r8+cff2)*            &
+    &                 L_S*Bio(i,k,ibg2)
+                cff43=fac13*K_NO3(ng)*inhNH4/(1.0_r8+cff2)*            &
+    &                 L_A*Bio(i,k,ibg3)
+                cff44=fac14*K_NO3(ng)*inhNH4/(1.0_r8+cff2)*            &
+    &                 L_R*Bio(i,k,ibg4)
+                                 
+                cff52=fac12*K_NH4(ng)/(1.0_r8+cff1)*L_S*Bio(i,k,ibg2)
+                cff53=fac13*K_NH4(ng)/(1.0_r8+cff1)*L_A*Bio(i,k,ibg3)
+                cff54=fac14*K_NH4(ng)/(1.0_r8+cff1)*L_R*Bio(i,k,ibg4)
+
+!
+!cjw Bug2 - saturated hyrocarbon
+!
+                Bio(i,k,iNH4_)=Bio(i,k,iNH4_)/(1.0_r8+cff52)
+                Bio(i,k,iNO3_)=Bio(i,k,iNO3_)/(1.0_r8+cff42)
+                N_Flux_NewProd_2=Bio(i,k,iNO3_)*cff42
+                N_Flux_RegProd_2=Bio(i,k,iNH4_)*cff52
+!
+!cjw Bug3 - aromatic hyrocarbon
+!
+                Bio(i,k,iNH4_)=Bio(i,k,iNH4_)/(1.0_r8+cff53)
+                Bio(i,k,iNO3_)=Bio(i,k,iNO3_)/(1.0_r8+cff43)
+                N_Flux_NewProd_3=Bio(i,k,iNO3_)*cff43
+                N_Flux_RegProd_3=Bio(i,k,iNH4_)*cff53
+!
+!cjw Bug4 - resin hyrocarbon
+!
+                Bio(i,k,iNH4_)=Bio(i,k,iNH4_)/(1.0_r8+cff54)
+                Bio(i,k,iNO3_)=Bio(i,k,iNO3_)/(1.0_r8+cff44)
+                N_Flux_NewProd_4=Bio(i,k,iNO3_)*cff44
+                N_Flux_RegProd_4=Bio(i,k,iNH4_)*cff54
+
+!cjw--- Return store carbon uptake for oxygen calculation - co2 prod
+                C_Flux_bg2=biotmp(iSat)-Bio(i,k,iSat)
+                C_Flux_bg3=biotmp(iArmt)-Bio(i,k,iArmt)
+                C_Flux_bg4=biotmp(iResin)-Bio(i,k,iResin)
+
+!cjw--- grow bacteria
+                Bio(i,k,ibg2)=Bio(i,k,ibg2)+                        &
+     &                         N_Flux_NewProd_2+N_Flux_RegProd_2
+                Bio(i,k,ibg3)=Bio(i,k,ibg3)+                        &
+     &                         N_Flux_NewProd_3+N_Flux_RegProd_3
+                Bio(i,k,ibg4)=Bio(i,k,ibg4)+                        &
+     &                         N_Flux_NewProd_4+N_Flux_RegProd_4
+! cjw---WWWWW
+
                 Bio(i,k,iNH4_)=Bio(i,k,iNH4_)/(1.0_r8+cff3)
                 N_Flux_Nitrifi=Bio(i,k,iNH4_)*cff3
                 Bio(i,k,iNO3_)=Bio(i,k,iNO3_)+N_Flux_Nitrifi
 
-!XCHEN ADDOIL MMMM4
-! DDMITRY - read oil concentration from 4D array
-! passed from the Lagr oil float and mapped onto
-! Eulerian frame
-                ! Limitation of SAT oil
-                coo1=Coil_mmole(i,j,k,1)*K_SAT(ng)
-                caa1=Coil_mmole(i,j,k,2)*K_AROM(ng)
-                cbb1=Coil_mmole(i,j,k,3)*K_RESIN(ng)
-# ifdef OIL_DEBUG
-                IF (i.eq.141 .and. j.eq.78 .and. k.eq.4) THEN
-                  print*,'PARsur=',PARsur(i), 'BIO: i=',i,              &
-                       'j=',j,'k=',k, 'nstp=',nstp
-!     &          'iSbug1=', iSbug1, 'iSbug2=', iSbug2, 'iSbug3=', iSbug3
-                  print*,'Bio1=',Bio(i,k,iSbug1),                       & 
-     &                   'Bio2=',Bio(i,k,iSbug2),                       &
-     &                   'Bio3=',Bio(i,k,iSbug3)
-                  print*,'Coil mmole/m3 Sat=',Coil_mmole(i,j,k,1),      &
-     &                   'Arm=',Coil_mmole(i,j,k,2),                    &
-     &                   'Rsn=',Coil_mmole(i,j,k,3)
-               ENDIF
-! END DD
-# endif
-! END DD
-!XCHEN ADDOIL WWWW
-!XCHEN ADDOIL MMMM5
-                ! sbug1 uptake oil, sbug1 grow
-                faco1=dtdays  !*t_PPmax
+!cjw---
+! The conversion of oil to co2
+!
+!         saturated+ + O2  ==> CO2 + H2O;
+!         alkane  +  O2 ==> CO2 + H2O  ;
+!         resin  +  O2 ==> CO2 + H2O  ;
+!
+! Assume average electron donor concentrations for these substrates.
+!
 
-                coo5=faco1*K_SAT(ng)/(1.0_r8+coo1)*Bio(i,k,iSbug1)
-! DDMITRY 
-                Coil_mmole(i,j,k,1)=Coil_mmole(i,j,k,1)/(1.0_r8+coo5)
-                SAT_Flux_RegProd=Coil_mmole(i,j,k,1)*coo5
-                Bio(i,k,iSbug1)=Bio(i,k,iSbug1) + SAT_Flux_RegProd
-! END DD
-                ! sbug2 uptake oil, sbug2 grow
-                faca1=dtdays  !*t_PPmax
-
-                caa5=faca1*K_AROM(ng)/(1.0_r8+caa1)*Bio(i,k,iSbug2)
-!DDMITRY
-                Coil_mmole(i,j,k,2)=Coil_mmole(i,j,k,2)/(1.0_r8+caa5)  ! DDMITRY
-                AROM_Flux_RegProd=Coil_mmole(i,j,k,2)*caa5*             &
-     &                            (16.0_r8/106.0_r8)*10.0_r8
-                                !N:C=16:106, 1 sat oil contain 10 C
-! END DD
-                Bio(i,k,iSbug2)=Bio(i,k,iSbug2) + AROM_Flux_RegProd
-
-                ! sbug3 uptake oil, sbug3 grow
-                facb1=dtdays  !*t_PPmax
-
-                cbb5=facb1*K_RESIN(ng)/(1.0_r8+cbb1)*Bio(i,k,iSbug3)
-! DDMITRY
-                Coil_mmole(i,j,k,3)=Coil_mmole(i,j,k,3)/(1.0_r8+cbb5)
-
-                RESIN_Flux_RegProd=Coil_mmole(i,j,k,3)*cbb5*            &
-     &                             (16.0_r8/106.0_r8)*10.0_r8
-                                !N:C=16:106, 1 sat oil contain 10 C
-! END DD
-                Bio(i,k,iSbug3)=Bio(i,k,iSbug3) + RESIN_Flux_RegProd
-
-!XCHEN ADDOIL WWWW
 #ifdef OXYGEN
-                Bio(i,k,iOxyg)=Bio(i,k,iOxyg)-2.0_r8*N_Flux_Nitrifi
+                Bio(i,k,iOxyg)=Bio(i,k,iOxyg)-2.0_r8*N_Flux_Nitrifi-   &
+      &               2.65_r8*10.0_r8*C_Flux_bg2-                      &
+      &               1.8571_r8*7.0_r8*C_Flux_bg3-                     &
+      &               2.3_r8*30.0_r8*C_Flux_bg4
+!                print*,'oxygen=',Bio(i,k,iOxyg)
 #endif
 #if defined CARBON && defined TALK_NONCONSERV
                 Bio(i,k,iTAlk)=Bio(i,k,iTAlk)-N_Flux_Nitrifi
 #endif
+!
+!cjw
+
               END DO
             END IF
           END DO
@@ -999,17 +1107,16 @@
 !-----------------------------------------------------------------------
 !
           fac1=dtdays*ZooGR(ng)
+
           cff2=dtdays*PhyMR(ng)
+!
+!cjw---
 
-!XCHEN ADDOIL MMMM6
-          faco1=dtdays*ZooGR(ng)
-          faca1=dtdays*ZooGR(ng)
-          facb1=dtdays*ZooGR(ng)
-          coo2=dtdays*PhyMR(ng)
-          caa2=dtdays*PhyMR(ng)
-          cbb2=dtdays*PhyMR(ng)
-!XCHEN ADDOIL WWWW
-
+          cff22=dtdays*BgMRs(ng)
+          cff23=dtdays*BgMRa(ng)
+          cff24=dtdays*BgMRr(ng)
+!
+!cjw---
           DO k=1,N(ng)
             DO i=Istr,Iend
 !
@@ -1020,131 +1127,64 @@
               cff3=1.0_r8/(1.0_r8+cff1)
               Bio(i,k,iPhyt)=cff3*Bio(i,k,iPhyt)
               Bio(i,k,iChlo)=cff3*Bio(i,k,iChlo)
-
-!XCHEN ADDOIL MMMM7
 !
-! small bug grazing by Large bug.
-!
-              coo1=faco1*Bio(i,k,iLbug1)*Bio(i,k,iSbug1)/               &
-     &          (K_SBUG1(ng)+Bio(i,k,iSbug1)*Bio(i,k,iSbug1))
-              coo3=1.0_r8/(1.0_r8+coo1)
-              Bio(i,k,iSbug1)=coo3*Bio(i,k,iSbug1)
-
-
-              caa1=faca1*Bio(i,k,iLbug2)*Bio(i,k,iSbug2)/               &
-     &          (K_SBUG2(ng)+Bio(i,k,iSbug2)*Bio(i,k,iSbug2))
-              caa3=1.0_r8/(1.0_r8+caa1)
-              Bio(i,k,iSbug2)=caa3*Bio(i,k,iSbug2)
-
-
-              cbb1=facb1*Bio(i,k,iLbug3)*Bio(i,k,iSbug3)/               &
-     &          (K_SBUG3(ng)+Bio(i,k,iSbug3)*Bio(i,k,iSbug3))
-              cbb3=1.0_r8/(1.0_r8+cbb1)
-              Bio(i,k,iSbug3)=cbb3*Bio(i,k,iSbug3)
-!XCHEN ADDOIL WWWW
-
-
+!cjw---
 !
 ! Phytoplankton assimilated to zooplankton and egested to small
-! detritus.
+! detritus.7
 !
               N_Flux_Assim=cff1*Bio(i,k,iPhyt)*ZooAE_N(ng)
               N_Flux_Egest=Bio(i,k,iPhyt)*cff1*(1.0_r8-ZooAE_N(ng))
+
               Bio(i,k,iZoop)=Bio(i,k,iZoop)+                            &
      &                       N_Flux_Assim
 
-!XCHEN ADDOIL MMMM8
-
-!
-! small bug assimilated to oil bug and egested to small
-! detritus.
-!
-              SBUG1_Flux_Assim=coo1*Bio(i,k,iSbug1)*ZooAE_N(ng)
-              SBUG1_Flux_Egest=Bio(i,k,iSbug1)*                        &
-     &        coo1*(1.0_r8-ZooAE_N(ng))
-              Bio(i,k,iLbug1)=Bio(i,k,iLbug1)+                         &
-     &                       SBUG1_Flux_Assim
-
-
-              SBUG2_Flux_Assim=caa1*Bio(i,k,iSbug2)*ZooAE_N(ng)
-              SBUG2_Flux_Egest=Bio(i,k,iSbug2)*                        &
-     &        caa1*(1.0_r8-ZooAE_N(ng))
-              Bio(i,k,iLbug2)=Bio(i,k,iLbug2)+                         &
-     &                       SBUG2_Flux_Assim
-
-              SBUG3_Flux_Assim=cbb1*Bio(i,k,iSbug3)*ZooAE_N(ng)
-              SBUG3_Flux_Egest=Bio(i,k,iSbug3)*                        &
-     &        cbb1*(1.0_r8-ZooAE_N(ng))
-              Bio(i,k,iLbug3)=Bio(i,k,iLbug3)+                         &
-     &                       SBUG3_Flux_Assim
-!XCHEN ADDOIL WWWW
-
-
-! XCHEN MMMM
-#ifdef ADDZX
-              Bio(i,k,iZx)=Bio(i,k,iZx)+                               &
-     &                       N_Flux_Assim
-#endif
-! XCHEN WWWW
               Bio(i,k,iSDeN)=Bio(i,k,iSDeN)+                            &
      &                       N_Flux_Egest
-
-!XCHEN ADDOIL MMMM9
-              ! Small Bug to Small Detritus
-              Bio(i,k,iSDeN)=Bio(i,k,iSDeN)+                            &
-     &                       SBUG1_Flux_Egest
-
-              Bio(i,k,iSDeN)=Bio(i,k,iSDeN)+                            &
-     &                       SBUG2_Flux_Egest
-
-              Bio(i,k,iSDeN)=Bio(i,k,iSDeN)+                            &
-     &                       SBUG3_Flux_Egest
-!XCHEN ADDOIL WWWW
 
 !
 ! Phytoplankton mortality (limited by a phytoplankton minimum).
 !
-              N_Flux_Pmortal=cff2*MAX(Bio(i,k,iPhyt)-PhyMin(ng),0.0_r8)
-              Bio(i,k,iPhyt)=Bio(i,k,iPhyt)-N_Flux_Pmortal
+            N_Flux_Pmortal=cff2*MAX(Bio(i,k,iPhyt)-PhyMin(ng),0.0_r8)
+            Bio(i,k,iPhyt)=Bio(i,k,iPhyt)-N_Flux_Pmortal
+  
+!cjw--- bug 2 mortality
+            
+            N_Flux_Pmortal_2=Bio(i,k,ibg2)/(1.0_r8+cff22*Bio(i,k,ibg2))
+            N_Flux_Pmortal_2=Bio(i,k,ibg2)-N_Flux_Pmortal_2
+            Bio(i,k,ibg2)=Bio(i,k,ibg2)-N_Flux_Pmortal_2
+
+!cjw---bug 3 mortality
+
+            N_Flux_Pmortal_3=Bio(i,k,ibg3)/(1.0_r8+cff23*Bio(i,k,ibg3))
+            N_Flux_Pmortal_3=Bio(i,k,ibg3)-N_Flux_Pmortal_3
+            Bio(i,k,ibg3)=Bio(i,k,ibg3)-N_Flux_Pmortal_3
+
+!cjw--- bug 4 mortality
+
+            N_Flux_Pmortal_4=Bio(i,k,ibg4)/(1.0_r8+cff24*Bio(i,k,ibg4))
+            N_Flux_Pmortal_4=Bio(i,k,ibg4)-N_Flux_Pmortal_4
+            Bio(i,k,ibg4)=Bio(i,k,ibg4)-N_Flux_Pmortal_4
+
+!cjw----
               Bio(i,k,iChlo)=Bio(i,k,iChlo)-                            &
      &                       cff2*MAX(Bio(i,k,iChlo)-ChlMin(ng),0.0_r8)
+
               Bio(i,k,iSDeN)=Bio(i,k,iSDeN)+                            &
-     &                       N_Flux_Pmortal
-
-
-
-!XCHEN ADDOIL MMMM10
-!
-! sbug1 mortality (limited by a sbug1 minimum).
-!
-              N_Flux_SBUG1mortal=coo2*                                  &
-     &                        MAX(Bio(i,k,iSbug1)-PhyMin(ng),0.0_r8)
-              Bio(i,k,iSbug1)=Bio(i,k,iSbug1) - N_Flux_SBUG1mortal
-              Bio(i,k,iSDeN)=Bio(i,k,iSDeN) + N_Flux_SBUG1mortal
-
-!
-! sbug2 mortality (limited by a sbug2 minimum).
-!
-              N_Flux_SBUG2mortal=caa2*                                  &
-     &                        MAX(Bio(i,k,iSbug2)-PhyMin(ng),0.0_r8)
-              Bio(i,k,iSbug2)=Bio(i,k,iSbug2) - N_Flux_SBUG2mortal
-              Bio(i,k,iSDeN)=Bio(i,k,iSDeN) + N_Flux_SBUG2mortal
-
-!
-! sbug3 mortality (limited by a sbug3 minimum).
-!
-              N_Flux_SBUG3mortal=cbb2*                                  &
-     &                        MAX(Bio(i,k,iSbug3)-PhyMin(ng),0.0_r8)
-              Bio(i,k,iSbug3)=Bio(i,k,iSbug3) - N_Flux_SBUG3mortal
-              Bio(i,k,iSDeN)=Bio(i,k,iSDeN) + N_Flux_SBUG3mortal
-
-!XCHEN ADDOIL WWWW
-
+     &                       N_Flux_Pmortal +                           & 
+     &                       betab(ng)*(N_Flux_Pmortal_2 +              &
+     &                       N_Flux_Pmortal_3 +                         &
+     &                       N_Flux_Pmortal_4)
 
 #ifdef CARBON
+!cjw---MMMMMMMM
               Bio(i,k,iSDeC)=Bio(i,k,iSDeC)+                            &
      &                       PhyCN(ng)*(N_Flux_Egest+N_Flux_Pmortal)+   &
-     &                       (PhyCN(ng)-ZooCN(ng))*N_Flux_Assim
+     &                       (PhyCN(ng)-ZooCN(ng))*N_Flux_Assim +       &
+     &                       PhyCN(ng)*betap(ng)*(N_Flux_Pmortal_2+     &
+     &                       N_Flux_Pmortal_3 +                         &
+     &                       N_Flux_Pmortal_4)
+!cjw----WWWWWWW              
 #endif
             END DO
           END DO
@@ -1158,65 +1198,14 @@
           cff1=dtdays*ZooBM(ng)
           fac2=dtdays*ZooMR(ng)
           fac3=dtdays*ZooER(ng)
-
-!XCHEN ADDOIL MMMM11
-          coo1=dtdays*ZooBM(ng)
-          caa1=dtdays*ZooBM(ng)
-          cbb1=dtdays*ZooBM(ng)
-          faco2=dtdays*ZooMR(ng)
-          faco3=dtdays*ZooER(ng)
-          faca2=dtdays*ZooMR(ng)
-          faca3=dtdays*ZooER(ng)
-          facb2=dtdays*ZooMR(ng)
-          facb3=dtdays*ZooER(ng)
-!XCHEN ADDOIL WWWW
-
           DO k=1,N(ng)
             DO i=Istr,Iend
-              fac1=fac3*Bio(i,k,iPhyt)*Bio(i,k,iPhyt)/                  &
-     &             (K_Phy(ng)+Bio(i,k,iPhyt)*Bio(i,k,iPhyt))
+               fac1=fac3*(Bio(i,k,iPhyt)*Bio(i,k,iPhyt)/             &
+     &             (K_Phy(ng)+Bio(i,k,iPhyt)*Bio(i,k,iPhyt)))
               cff2=fac2*Bio(i,k,iZoop)
               cff3=fac1*ZooAE_N(ng)
               Bio(i,k,iZoop)=Bio(i,k,iZoop)/                            &
      &                       (1.0_r8+cff2+cff3)
-
-!XCHEN ADDOIL MMMM12
-!
-!Large bug metabolism
-!             
-              faco1=faco3*Bio(i,k,iSbug1)*Bio(i,k,iSbug1)/             &
-     &             (K_SBUG1(ng)+Bio(i,k,iSbug1)*Bio(i,k,iSbug1))
-              coo2=faco2*Bio(i,k,iLbug1)
-              coo3=faco1*ZooAE_N(ng)
-              Bio(i,k,iLbug1)=Bio(i,k,iLbug1)/                          &
-     &                       (1.0_r8+coo2+coo3)
-
-              faca1=faca3*Bio(i,k,iSbug2)*Bio(i,k,iSbug2)/             &
-     &             (K_SBUG2(ng)+Bio(i,k,iSbug2)*Bio(i,k,iSbug2))
-              caa2=faca2*Bio(i,k,iLbug2)
-              caa3=faca1*ZooAE_N(ng)
-              Bio(i,k,iLbug2)=Bio(i,k,iLbug2)/                          &
-     &                       (1.0_r8+caa2+caa3)
-
-              facb1=facb3*Bio(i,k,iSbug3)*Bio(i,k,iSbug3)/             &
-     &             (K_SBUG3(ng)+Bio(i,k,iSbug3)*Bio(i,k,iSbug3))
-              cbb2=facb2*Bio(i,k,iLbug3)
-              cbb3=facb1*ZooAE_N(ng)
-              Bio(i,k,iLbug3)=Bio(i,k,iLbug3)/                          &
-     &                       (1.0_r8+cbb2+cbb3)
-
-
-!XCHEN ADDOIL WWWW
-
-! XCHEN MMMM
-#ifdef ADDZX
-              Bio(i,k,iZx)=Bio(i,k,iZx)/                            &
-     &                       (1.0_r8+cff2+cff3)
-#endif
-! XCHEN WWWW
-
-
-
 !
 !  Zooplankton mortality and excretion.
 !
@@ -1224,59 +1213,14 @@
               N_Flux_Zexcret=cff3*Bio(i,k,iZoop)
               Bio(i,k,iNH4_)=Bio(i,k,iNH4_)+N_Flux_Zexcret
               Bio(i,k,iSDeN)=Bio(i,k,iSDeN)+N_Flux_Zmortal
-
-!XCHEN ADDOIL MMMM13
-!
-!  large bug mortality and excretion.
-!
-              N_Flux_LBUG1mortal=coo2*Bio(i,k,iLbug1)
-              N_Flux_LBUG1excret=coo3*Bio(i,k,iLbug1)
-              Bio(i,k,iNH4_)=Bio(i,k,iNH4_)+N_Flux_LBUG1excret
-              Bio(i,k,iSDeN)=Bio(i,k,iSDeN)+N_Flux_LBUG1mortal
-
-              N_Flux_LBUG2mortal=caa2*Bio(i,k,iLbug2)
-              N_Flux_LBUG2excret=caa3*Bio(i,k,iLbug2)
-              Bio(i,k,iNH4_)=Bio(i,k,iNH4_)+N_Flux_LBUG2excret
-              Bio(i,k,iSDeN)=Bio(i,k,iSDeN)+N_Flux_LBUG2mortal
-
-              N_Flux_LBUG3mortal=cbb2*Bio(i,k,iLbug3)
-              N_Flux_LBUG3excret=cbb3*Bio(i,k,iLbug3)
-              Bio(i,k,iNH4_)=Bio(i,k,iNH4_)+N_Flux_LBUG3excret
-              Bio(i,k,iSDeN)=Bio(i,k,iSDeN)+N_Flux_LBUG3mortal
-
-!XCHEN ADDOIL WWWW
-
 !
 !  Zooplankton basal metabolism (limited by a zooplankton minimum).
 !
               N_Flux_Zmetabo=cff1*MAX(Bio(i,k,iZoop)-ZooMin(ng),0.0_r8)
               Bio(i,k,iZoop)=Bio(i,k,iZoop)-N_Flux_Zmetabo
+
               Bio(i,k,iNH4_)=Bio(i,k,iNH4_)+N_Flux_Zmetabo
-
-!XCHEN ADDOIL MMMM14
-!
-!  large bug basal metabolism (limited by a large bug minimum).
-!
-              N_Flux_LBUG1metabo=coo1*MAX(Bio(i,k,iLbug1)-ZooMin(ng),0.0_r8)
-              Bio(i,k,iLbug1)=Bio(i,k,iLbug1)-N_Flux_LBUG1metabo
-              Bio(i,k,iNH4_)=Bio(i,k,iNH4_)+N_Flux_LBUG1metabo
-
-              N_Flux_LBUG2metabo=caa1*MAX(Bio(i,k,iLbug2)-ZooMin(ng),0.0_r8)
-              Bio(i,k,iLbug2)=Bio(i,k,iLbug2)-N_Flux_LBUG2metabo
-              Bio(i,k,iNH4_)=Bio(i,k,iNH4_)+N_Flux_LBUG2metabo
-
-              N_Flux_LBUG3metabo=cbb1*MAX(Bio(i,k,iLbug3)-ZooMin(ng),0.0_r8)
-              Bio(i,k,iLbug3)=Bio(i,k,iLbug3)-N_Flux_LBUG3metabo
-              Bio(i,k,iNH4_)=Bio(i,k,iNH4_)+N_Flux_LBUG3metabo
-
-!XCHEN ADDOIL WWWW
-
-
-! XCHEN MMMM
-#ifdef ADDZX
-              Bio(i,k,iZx)=Bio(i,k,iZx)-N_Flux_Zmetabo
-#endif
-! XCHEN WWWW
+!              print*,'zoo,sden=',Bio(i,k,iZoop),Bio(i,k,iSDeN)
 #ifdef OXYGEN
               Bio(i,k,iOxyg)=Bio(i,k,iOxyg)-                            &
      &                       rOxNH4*(N_Flux_Zmetabo+N_Flux_Zexcret)
@@ -1287,8 +1231,6 @@
               Bio(i,k,iTIC_)=Bio(i,k,iTIC_)+                            &
      &                       ZooCN(ng)*(N_Flux_Zmetabo+N_Flux_Zexcret)
 #endif
-
-
             END DO
           END DO
 !
@@ -1297,57 +1239,64 @@
 !-----------------------------------------------------------------------
 !
           fac1=dtdays*CoagR(ng)
-!XCHEN ADDOIL MMMM15
-          faco1=dtdays*CoagR(ng)
-          faca1=dtdays*CoagR(ng)
-          facb1=dtdays*CoagR(ng)
-!XCHEN ADDOIL WWWW
           DO k=1,N(ng)
             DO i=Istr,Iend
               cff1=fac1*(Bio(i,k,iSDeN)+Bio(i,k,iPhyt))
               cff2=1.0_r8/(1.0_r8+cff1)
               Bio(i,k,iPhyt)=Bio(i,k,iPhyt)*cff2
               Bio(i,k,iChlo)=Bio(i,k,iChlo)*cff2
+!cjw---
+!              IF(isoil) THEN
+              cff12=fac1*(Bio(i,k,iSDeN)+Bio(i,k,ibg2))
+              cff13=fac1*(Bio(i,k,iSDeN)+Bio(i,k,ibg3))
+              cff14=fac1*(Bio(i,k,iSDeN)+Bio(i,k,ibg4))
+              cff22=1.0_r8/(1.0_r8+cff12)
+              cff23=1.0_r8/(1.0_r8+cff13)
+              cff24=1.0_r8/(1.0_r8+cff14)
+              Bio(i,k,ibg2)=Bio(i,k,ibg2)*cff22
+              Bio(i,k,ibg3)=Bio(i,k,ibg3)*cff23
+              Bio(i,k,ibg4)=Bio(i,k,ibg4)*cff24
+!              END IF
+!cjw----
               Bio(i,k,iSDeN)=Bio(i,k,iSDeN)*cff2
               N_Flux_CoagP=Bio(i,k,iPhyt)*cff1
               N_Flux_CoagD=Bio(i,k,iSDeN)*cff1
               Bio(i,k,iLDeN)=Bio(i,k,iLDeN)+                            &
      &                       N_Flux_CoagP+N_Flux_CoagD
 
-!XCHEN ADDOIL MMMM16
-              coo1=faco1*(Bio(i,k,iSDeN)+Bio(i,k,iSbug1))
-              coo2=1.0_r8/(1.0_r8+coo1)
-              Bio(i,k,iSbug1)=Bio(i,k,iSbug1)*coo2
-              Bio(i,k,iSDeN)=Bio(i,k,iSDeN)*coo2
-              N_Flux_CoagSBUG1=Bio(i,k,iSbug1)*coo1
-              N_Flux_CoagD_SBUG1=Bio(i,k,iSDeN)*coo1
+!              IF(isoil) THEN
+!cjw---bug 2 coagulation
+              Bio(i,k,iSDeN)=Bio(i,k,iSDeN)*cff22
+              N_Flux_CoagB2=Bio(i,k,ibg2)*cff12
+              N_Flux_CoagD2=Bio(i,k,iSDeN)*cff12
               Bio(i,k,iLDeN)=Bio(i,k,iLDeN)+                            &
-     &                       N_Flux_CoagSBUG1+N_Flux_CoagD_SBUG1
-
-              caa1=faca1*(Bio(i,k,iSDeN)+Bio(i,k,iSbug2))
-              caa2=1.0_r8/(1.0_r8+caa1)
-              Bio(i,k,iSbug2)=Bio(i,k,iSbug2)*caa2
-              Bio(i,k,iSDeN)=Bio(i,k,iSDeN)*caa2
-              N_Flux_CoagSBUG2=Bio(i,k,iSbug2)*caa1
-              N_Flux_CoagD_SBUG2=Bio(i,k,iSDeN)*caa1
+     &                       N_Flux_CoagB2+N_Flux_CoagD2
+!cjw---bug3 coagulation
+              Bio(i,k,iSDeN)=Bio(i,k,iSDeN)*cff23
+              N_Flux_CoagB3=Bio(i,k,ibg3)*cff13
+              N_Flux_CoagD3=Bio(i,k,iSDeN)*cff13
               Bio(i,k,iLDeN)=Bio(i,k,iLDeN)+                            &
-     &                       N_Flux_CoagSBUG2+N_Flux_CoagD_SBUG2
-
-              cbb1=facb1*(Bio(i,k,iSDeN)+Bio(i,k,iSbug3))
-              cbb2=1.0_r8/(1.0_r8+cbb1)
-              Bio(i,k,iSbug3)=Bio(i,k,iSbug3)*cbb2
-              Bio(i,k,iSDeN)=Bio(i,k,iSDeN)*cbb2
-              N_Flux_CoagSBUG3=Bio(i,k,iSbug3)*cbb1
-              N_Flux_CoagD_SBUG3=Bio(i,k,iSDeN)*cbb1
+     &                       N_Flux_CoagB3+N_Flux_CoagD3
+!cjw---bug4 coagulation
+              Bio(i,k,iSDeN)=Bio(i,k,iSDeN)*cff24
+              N_Flux_CoagB4=Bio(i,k,ibg4)*cff14
+              N_Flux_CoagD4=Bio(i,k,iSDeN)*cff14
               Bio(i,k,iLDeN)=Bio(i,k,iLDeN)+                            &
-     &                       N_Flux_CoagSBUG3+N_Flux_CoagD_SBUG3
-
-!XCHEN ADDOIL WWWW
-
+     &                       N_Flux_CoagB4+N_Flux_CoagD4
+!              END IF
+!
+!cjw----
 #ifdef CARBON
-              Bio(i,k,iSDeC)=Bio(i,k,iSDeC)-PhyCN(ng)*N_Flux_CoagD
+!cjw----MMMMM
+              Bio(i,k,iSDeC)=Bio(i,k,iSDeC)-PhyCN(ng)*N_Flux_CoagD-     &
+     &                       PhyCN(ng)(N_Flux_CoagD2+                   &
+     &                       N_Flux_CoagD3+N_Flux_CoagD4)
               Bio(i,k,iLDeC)=Bio(i,k,iLDeC)+                            &
-     &                       PhyCN(ng)*(N_Flux_CoagP+N_Flux_CoagD)
+     &                       PhyCN(ng)*(N_Flux_CoagP+N_Flux_CoagD)+     &
+     &                       PhyCN(ng)*(N_Flux_CoagB2+N_Flux_CoagD2+    &
+     &                       N_Flux_CoagB3+N_Flux_CoagD3 +              &
+     &                       N_Flux_CoagB4+N_Flux_CoagD4)
+!cjw----WWWWW
 #endif
             END DO
           END DO
@@ -1807,6 +1756,40 @@
 #endif
           END DO SINK_LOOP
         END DO ITER_LOOP
+
+
+!
+! DDMITRY
+! Update global oil plume Eulerian array
+! Restore OIL plume information from overall oil concentration and 
+! Convert oil concentration mmole -> kg/m3 for oil model
+! Remove oil plume concentration from the temporary array 
+! and leave background oil concentration only
+!
+        DO k=1,N(ng)
+          DO i=Istr,Iend
+            DO ic=1,Nocmp
+              coil_new=Bio(i,k,iOil(ic))*rOil(i,j,k,ic)   ! oil plume conc 
+              Coil(i,j,k,ic)=coil_new*wmole(ic)*1.e-6_r8
+              Bio(i,k,iOil(ic))=Bio(i,k,iOil(ic))*                      &
+     &                           (1.0_r8-rOil(i,j,k,ic)) ! background oil conc
+
+#ifdef OIL_BIO_DEBUG
+              IF (i.eq.ip0 .and. k.eq.kp0 .and. j.eq.jp0) THEN
+                print*,'XXX NEW: Bio=',Bio(i,k,iOil(ic)),'OilModel=',   &
+     &                 coil_new,'indx=',iOil(ic),                       &
+     &                 'Coil kg/m3=',Coil(i,j,k,ic)
+              ENDIF
+#endif
+            ENDDO
+          ENDDO
+        ENDDO
+
+! END DD
+
+
+
+
 !
 !-----------------------------------------------------------------------
 !  Update global tracer variables: Add increment due to BGC processes
@@ -1834,22 +1817,6 @@
           END DO
         END DO
       END DO J_LOOP
-!
-! DDMITRY
-! Convert oil concentration mmole -> kg/m3 for oil model 
-!
-      DO k=1,N(ng)
-        DO j=Jstr,Jend
-          DO i=Istr,Iend
-            DO ic=1,Nocmp
-              Coil(i,j,k,ic)=Coil_mmole(i,j,k,ic)*wmole(ic)*1.e-6_r8
-            ENDDO
-          ENDDO
-        ENDDO
-      ENDDO
-
-! END DD
-       
 
       RETURN
       END SUBROUTINE biology_tile

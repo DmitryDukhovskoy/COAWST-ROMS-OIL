@@ -159,6 +159,9 @@
 #endif
 
       CALL read_PhyPar (model, inp, out, Lwrite)
+! DDMITRY
+      IF (Master) print*,'Read_PhyPar is done'
+! DD END
 #ifdef DISTRIBUTE
       CALL mp_bcasti (1, model, exit_flag)
 #endif

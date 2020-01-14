@@ -676,7 +676,7 @@
 !cjw--- energy limitation terms
 !
                cff122=Bio(i,k,iSat)*K_Sat(ng)
-               cff123=Bio(i,k,iArom)*K_Arom(ng)
+               cff123=Bio(i,k,iArmt)*K_Arom(ng)
                cff124=Bio(i,k,iResin)*K_Resin(ng)
                 L_S=cff122/(1.0_r8+cff122)
                 L_A=cff123/(1.0_r8+cff123)
@@ -711,11 +711,11 @@
       &                K_Resin(ng)/(1.0_r8+cff124)*Bio(i,k,ibg4)
                                  
                 biotmp(iSat)=Bio(i,k,iSat)
-                biotmp(iArom)=Bio(i,k,iArom)
+                biotmp(iArmt)=Bio(i,k,iArmt)
                 biotmp(iResin)=Bio(i,k,iResin)
 
                 Bio(i,k,iSat)=Bio(i,k,iSat)/(1.0_r8+cff452)
-                Bio(i,k,iArom)=Bio(i,k,iArom)/(1.0_r8+cff453)
+                Bio(i,k,iArmt)=Bio(i,k,iArmt)/(1.0_r8+cff453)
                 Bio(i,k,iResin)=Bio(i,k,iResin)/(1.0_r8+cff454)
 
                                  
@@ -749,7 +749,7 @@
 !cjw--- Return store carbon uptake for oxygen calculation - co2 prod
 !
                 C_Flux_bg2=biotmp(iSat)-Bio(i,k,iSat)
-                C_Flux_bg3=biotmp(iArom)-Bio(i,k,iArom)
+                C_Flux_bg3=biotmp(iArmt)-Bio(i,k,iArmt)
                 C_Flux_bg4=biotmp(iResin)-Bio(i,k,iResin)
 !                print*, 'C_flux=',C_Flux_bg2, C_Flux_bg3,C_Flux_bg4
 !
@@ -888,7 +888,7 @@
 !cjw--- energy limitation terms
 !
                cff122=Bio(i,k,iSat)*K_Sat(ng)
-               cff123=Bio(i,k,iArom)*K_Arom(ng)
+               cff123=Bio(i,k,iArmt)*K_Arom(ng)
                cff124=Bio(i,k,iResin)*K_Resin(ng)
                 L_S=cff122/(1.0_r8+cff122)
                 L_A=cff123/(1.0_r8+cff123)
@@ -907,11 +907,11 @@
       &               K_Resin(ng)/(1.0_r8+cff124)*Bio(i,k,ibg4)
                                  
                 biotmp(iSat)=Bio(i,k,iSat)
-                biotmp(iArom)=Bio(i,k,iArom)
+                biotmp(iArmt)=Bio(i,k,iArmt)
                 biotmp(iResin)=Bio(i,k,iResin)
                                  
                 Bio(i,k,iSat)=Bio(i,k,iSat)/(1.0_r8+cff452)
-                Bio(i,k,iArom)=Bio(i,k,iArom)/(1.0_r8+cff453)
+                Bio(i,k,iArmt)=Bio(i,k,iArmt)/(1.0_r8+cff453)
                 Bio(i,k,iResin)=Bio(i,k,iResin)/(1.0_r8+cff454)
 
                                  
@@ -950,7 +950,7 @@
 
 !cjw--- Return store carbon uptake for oxygen calculation - co2 prod
                 C_Flux_bg2=biotmp(iSat)-Bio(i,k,iSat)
-                C_Flux_bg3=biotmp(iArom)-Bio(i,k,iArom)
+                C_Flux_bg3=biotmp(iArmt)-Bio(i,k,iArmt)
                 C_Flux_bg4=biotmp(iResin)-Bio(i,k,iResin)
 
 !cjw--- grow bacteria

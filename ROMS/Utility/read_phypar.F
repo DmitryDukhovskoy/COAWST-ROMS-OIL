@@ -391,6 +391,7 @@
               NtileE(1:Ngrids)=NtileJ(1:Ngrids)
 #ifdef BIOLOGY
               CALL initialize_biology
+             if (Master) print*,'Initializing biology completed '  ! DDMITRY
 #endif
 #if defined SEDIMENT || defined BBL_MODEL
               CALL initialize_sediment
@@ -403,6 +404,7 @@
               CALL initialize_scalars  ! number of nested grids and
               CALL allocate_ncparam    ! domain parameters are known
               CALL initialize_ncparam
+              if (Master) print*,'Initilization calls done'  ! DDMITRY
 #if defined AD_SENSITIVITY    || defined IS4DVAR_SENSITIVITY || \
     defined FORCING_SV        || defined OPT_OBSERVATIONS    || \
     defined SENSITIVITY_4DVAR || defined SO_SEMI             || \

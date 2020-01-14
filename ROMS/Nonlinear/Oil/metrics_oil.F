@@ -7,6 +7,7 @@
 !========================================== Dmitry S Dukhovskoy      ===
 !                                                                      !
 !     Computes diagnsotics of oil 3D fields and reports                !
+!    For checking Lagr-> Eulerian mapping                              !
 !                                                                      !
 !=======================================================================
 !

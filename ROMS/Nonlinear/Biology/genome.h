@@ -715,7 +715,7 @@
 #ifdef ADDOIL
                 ! Limitation of SAT oil
                 coo1=Bio(i,k,iSat)*K_SAT(ng)
-                caa1=Bio(i,k,iArom)*K_AROM(ng)
+                caa1=Bio(i,k,iArmt)*K_AROM(ng)
                 cbb1=Bio(i,k,iResin)*K_RESIN(ng)
 #endif
 !XCHEN ADDOIL WWWW
@@ -755,9 +755,9 @@
 
                 caa5=faca1*K_AROM(ng)/(1.0_r8+caa1)*Bio(i,k,iSbug2)
 
-                Bio(i,k,iArom)=Bio(i,k,iArom)/(1.0_r8+caa5)
+                Bio(i,k,iArmt)=Bio(i,k,iArmt)/(1.0_r8+caa5)
 
-                AROM_Flux_RegProd=Bio(i,k,iArom)*caa5*(16/106)*10
+                AROM_Flux_RegProd=Bio(i,k,iArmt)*caa5*(16/106)*10
                                 !N:C=16:106, 1 sat oil contain 10 C
                 Bio(i,k,iSbug2)=Bio(i,k,iSbug2) + AROM_Flux_RegProd
 
@@ -866,7 +866,7 @@
 #ifdef ADDOIL
                 ! Limitation of SAT oil
                 coo1=Bio(i,k,iSat)*K_SAT(ng)
-                caa1=Bio(i,k,iArom)*K_AROM(ng)
+                caa1=Bio(i,k,iArmt)*K_AROM(ng)
                 cbb1=Bio(i,k,iResin)*K_RESIN(ng)
 #endif
 !XCHEN ADDOIL WWWW
@@ -887,9 +887,9 @@
 
                 caa5=faca1*K_AROM(ng)/(1.0_r8+caa1)*Bio(i,k,iSbug2)
 
-                Bio(i,k,iArom)=Bio(i,k,iArom)/(1.0_r8+caa5)
+                Bio(i,k,iArmt)=Bio(i,k,iArmt)/(1.0_r8+caa5)
 
-                AROM_Flux_RegProd=Bio(i,k,iArom)*caa5*(16/106)*10
+                AROM_Flux_RegProd=Bio(i,k,iArmt)*caa5*(16/106)*10
                                 !N:C=16:106, 1 sat oil contain 10 C
                 Bio(i,k,iSbug2)=Bio(i,k,iSbug2) + AROM_Flux_RegProd
 

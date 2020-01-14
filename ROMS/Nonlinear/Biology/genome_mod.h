@@ -102,7 +102,7 @@
       integer :: iLbug3                 ! lbug concentration
       integer :: iLbug4                 ! lbug concentration
       integer :: iSat                   ! oil concentration
-      integer :: iArom                  ! oil concentration
+      integer :: iArmt                  ! oil concentration
       integer :: iResin                 ! oil concentration
 #endif
 !XCHEN OILBUGS WWWW
@@ -469,7 +469,7 @@
 !#ifdef OILBUGS DDMITRY
 #ifdef OIL_BIO
         iSat=ic+1
-        iArom=ic+2
+        iArmt=ic+2
         iResin=ic+3
         iSbug1=ic+4
         iSbug2=ic+5

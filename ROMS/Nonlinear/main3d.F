@@ -913,8 +913,8 @@
 !# ifdef OIL_BIO
 !                CALL bio_degradation(ng, tile)  ! fake biodegradation to check mapping
 !# endif    
-! END DD
-# ifdef BIOLOGY 
+# ifdef BIOLOGY
+                IF (Master) print*,'Calling biology' 
                 CALL biology (ng, tile)
 # endif
 # ifdef SEDIMENT
@@ -923,7 +923,6 @@
               END DO
 !$OMP BARRIER
 # if defined FLOAT_OIL && defined OIL_EULR 
-! DDMITRY
 ! Update OIL information map Euler -> Lagrangian
               IF (Lfloats(ng)) THEN
 #  ifdef _OPENMP
