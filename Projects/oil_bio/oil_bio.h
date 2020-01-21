@@ -77,8 +77,8 @@
 # define RI_SPLINES
 #endif
 
-#define BIOLOGY
-#define BIO_CSOMIO
+#undef BIOLOGY
+#undef BIO_CSOMIO
 
 #ifdef BIO_CSOMIO
 # undef ANA_BIOLOGY
@@ -136,19 +136,38 @@
 #undef FORWARD_READ
 #undef FORWARD_MIXING
 
+/* Oil floats coupled/uncoupled with BIO and Sediment
+ *  To Run uncoupled: simply define FLOATS, FLOAT_VWALK, FLOAT_OIL
+ *  OIL_EULR is not needed - this is only needed for coupled runs
+ *  to map oil fields Lagr -> /<- Eulerian
+ *  However if OIL_EULR is undefined oil fields are only saved
+ *  on Lagrangian frame in oil_floats.nc 
+ *  if OIL_EULR is turned on, oil fields mapped onto Eulerian frams
+ *  are also outputed into ocean history files
+ *  WOIL_INTEGRATED: on - integrated formulaes are used for
+ *  calculating oil droplet buoyancy velocity
+ *  otherways - two-equation formulation is used
+ *  all DEBUG flags are recommended to turn off to keep
+ *  the log file small
+ *  */
 #define FLOATS
 #define FLOAT_VWALK
 #define FLOAT_OIL
 #undef WOIL_INTEGRATED
 #define OIL_DEBUG
 #define OIL_MAP_DEBUG
-#define OIL_BIO
+#undef OIL_BIO  /*plugs in csomio oil model */
 #undef OIL_BIO_DEBUG
 #undef OIL_SEDIMENT
+#define OIL_EULR 
 #if defined OIL_BIO || defined OIL_SEDIMENT
 #  define OIL_EULR  /* EULER->/<- Lagrangian mapping */ 
 #endif
-#if undefined OIL_BIO
+#if defined OIL_BIO
+#  define BIOLOGY
+#  define BIO_CSOMIO
+#endif
+#if !defined OIL_BIO
 #  undef OIL_BIO_DEBUG
 #endif
 /*
