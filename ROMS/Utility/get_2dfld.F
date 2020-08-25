@@ -138,8 +138,16 @@
       Lregrid=.FALSE.
       Tmono=Finfo(7,ifield,ng)
 !
-      IF ((Tmono.lt.time(ng)).or.(iic(ng).eq.0).or.                     &
+!  KMT Changed so that edge case of run time `time(ng)` and clm times
+!  are more carefully checked in case they are equal. That is the change
+!  in logic here.
+! DDMITRY: deleted repition:
+!     &     .or.(iic(ng).eq.0).or.                     &    DDMITRY 
+      IF ((ABS(Tmono-time(ng)).le.(0.5*dt(ng))).or.                     &
+     &      (Tmono.lt.time(ng)).or.(iic(ng).eq.0).or.                   &
      &    (iic(ng).eq.ntstart(ng))) THEN
+!      IF ((Tmono.lt.time(ng)).or.(iic(ng).eq.0).or.                     &
+!     &    (iic(ng).eq.ntstart(ng))) THEN
 !
 !  Load properties for requested field from information arrays.
 !
@@ -213,6 +221,7 @@
 !  is augmented by four indicating reading a 3D field. This rational is
 !  used to read fields like tide data.
 !
+
           IF (Vid.ge.0) THEN
             Fmin=0.0_r8
             Fmax=0.0_r8
@@ -230,6 +239,7 @@
 #endif
      &                            Fout)
               ELSE
+
                 status=nf_fread2d(ng, model, ncfile, ncid,              &
      &                            Vname(1,ifield), Vid,                 &
      &                            Trec, Vtype, Vsize,                   &
@@ -239,6 +249,7 @@
      &                            Fmask,                                &
 #endif
      &                            Fout(:,:,Tindex), Lregrid)
+
               END IF
             ELSE
               CALL netcdf_get_fvar (ng, model, ncfile, Vname(1,ifield), &

@@ -137,7 +137,7 @@
       IF (Master) CALL my_getarg (1, Iname)
       CALL mp_bcasts (1, model, Iname)
 ! DDMITRY
-      IF (Master) print*,'Iname=',Iname
+      IF (Master) print*,'inp_par: Iname=',Iname
 ! END DD
       OPEN (inp, FILE=TRIM(Iname), FORM='formatted', STATUS='old',      &
      &      ERR=20)
@@ -157,7 +157,6 @@
  40   CONTINUE
 # endif
 #endif
-
       CALL read_PhyPar (model, inp, out, Lwrite)
 ! DDMITRY
       IF (Master) print*,'Read_PhyPar is done'

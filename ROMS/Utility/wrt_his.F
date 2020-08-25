@@ -772,6 +772,12 @@
      &                     GRID(ng) % umask_full,                       &
 # endif
      &                     OCEAN(ng) % u(:,:,:,NOUT))
+! DDMITRY
+        IF (Master) THEN
+          print*,' === Writing U: iNLM=',iNLM,'NOUT=',NOUT,   &
+     &           'u(i,j,k,NOUT)=',OCEAN(ng) % u(50,48,40,NOUT)
+        ENDIF
+! END DD
         IF (FoundError(status, nf90_noerr, __LINE__,                    &
      &                 __FILE__)) THEN
           IF (Master) THEN
@@ -838,6 +844,12 @@
      &                     GRID(ng) % vmask_full,                       &
 # endif
      &                     OCEAN(ng) % v(:,:,:,NOUT))
+! DDMITRY
+        IF (Master) THEN
+          print*,' === Writing V: iNLM=',iNLM,'NOUT=',NOUT,   &
+     &           'v(i,j,k,NOUT)=',OCEAN(ng) % v(50,48,40,NOUT)
+        ENDIF
+! END DD
         IF (FoundError(status, nf90_noerr, __LINE__,                    &
      &                 __FILE__)) THEN
           IF (Master) THEN

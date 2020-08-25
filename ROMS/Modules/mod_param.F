@@ -992,20 +992,36 @@
         NFV(ng)=NT(ng)+16
 #  endif
 # elif defined FLOAT_OIL
-! DDMITRY - add dimension parameters for oil floats
-#  ifdef FLOAT_VWALK
-        NFV(ng)=NT(ng)+21
-#  else
+! DDMITRY
+#  ifndef OFFLINE_FLOATS
+#   ifdef FLOAT_VWALK
+        NFV(ng)=NT(ng)+21 ! match with mod_floats.F
+#   else
         NFV(ng)=NT(ng)+19
-! END DD
-#  endif
-# else
-#  ifdef FLOAT_VWALK
-        NFV(ng)=NT(ng)+12
+#   endif
 #  else
+#   ifdef FLOAT_VWALK
+        NFV(ng)=NT(ng)+25
+#   else
+        NFV(ng)=NT(ng)+23
+#   endif
+#  endif  /* ifndef OFFLINE_FLOATS */
+# else
+#  ifndef OFFLINE_FLOATS
+#   ifdef FLOAT_VWALK
+        NFV(ng)=NT(ng)+12
+#   else
         NFV(ng)=NT(ng)+10
-#  endif
+#   endif
+#  else
+#   ifdef FLOAT_VWALK
+        NFV(ng)=NT(ng)+16
+#   else
+        NFV(ng)=NT(ng)+10
+#   endif
+#  endif  /* ifndef OFFLINE_FLOATS */
 # endif
+! END DD
 #ifdef OFFLINE_FLOATS_LATLON
 ! add 4 variables: x-space, y-space, water depth and Hz 
           NFV(ng)=NFV(ng)+4
@@ -1019,6 +1035,11 @@
         NSV(ng)=NSV(ng)+NT(ng)
 #endif
       END DO
+#ifdef OIL_DEBUG
+! DDMITRY debug
+        print*,'mod_param: # of tracers NT=',NT, &
+     &        ' #of flt var NFV=',NFV
+#endif
 !
 !  Set maximum number of tracer between all nested grids.
 !

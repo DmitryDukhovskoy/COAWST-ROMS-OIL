@@ -281,7 +281,7 @@
 ! Checking evap: track a float with max surface exposure
 ! Will delete later - debugging only
 !      tsrfx=0.0_r8
-!      iFltS=0
+      iFltS=0
 !      DO l=Lstr,Lend
 !        IF (my_thread(l).and.bounded(l)) THEN
 !          IF (Predictor) THEN          
@@ -318,6 +318,20 @@
 !            CALL oil_density_ini(rhoo,frsats,frarom,frasph,             &
 !     &                       rsats,rarom,rasph)
 !            CALL oil_size_ini(Doil)
+!# ifdef OIL_DEBUG
+! print out all track indices to check - see mod_param.F mod_floats.F
+!              print*,'oil_plume: itstr=',itstr, ' ixgrd=',ixgrd,  &
+!     &               'iygrd=',iygrd,' izgrd=',izgrd,' iflon=',iflon,  &
+!     &               ' iflat=',iflat,' idpth=',idpth, ' ixrhs=',ixrhs, &
+!     &               ' iyrhs=',iyrhs,' izrhs=',izrhs,' ifden=',ifden, &
+!     &               ' ifakt=',ifakt,' ifdak=',ifdak,' i1oHz=',i1oHz, &
+!     &               ' iroil=',iroil,' iwoil=',iwoil,' isizo=',isizo, &
+!     &               ' isats=',isats,' iarom=',iarom,' isrfo=',isrfo, &
+!     &               ' ixwnd=',ixwnd,' iywnd=',iywnd
+!            print*,'oil_plume: l=',l,' time=',time(ng),'hlfdt=',HalfDT,&
+!     &          'Tinfo=',Tinfo(itstr,l)
+!            print*,'itstr=',itstr,'itemp=',itemp,'isalt=',isalt
+!# endif
 !  Already initialized
             rsats=ROilCmp(l,1)
             rarom=ROilCmp(l,2)
@@ -343,8 +357,14 @@
             ENDIF
 # endif
 
-            DO i=0,NFT  ! time levels
-!              print*,'Initializ temp=',temp,'S=',salt
+            DO i=0,NFT  ! time level
+!              print*,'itemp=',itemp,' isalt=',isalt,' ifTvar(isalt)=',&
+!     &                ifTvar(isalt)
+!              print*,'OilPlume: Initializ temp=',temp,'S=',salt
+!              print*,'l=',l,' i=',i,' t=',temp,' s=',salt,  &
+!     &                 ' frsats=',frsats, &
+!     &                 ' frarom=',frarom,' rhoo=',rhoo
+
               track(ifTvar(itemp),i,l)=temp
               track(ifTvar(isalt),i,l)=salt
               track(isats,i,l)=frsats
@@ -366,6 +386,18 @@
           salt=track(ifTvar(isalt),nfp1,l)
 ! Seems to be an overshoot problem in some grid points
 ! with negative S near the Mississip. river
+          IF (abs(salt)>50.0_r8) THEN
+            print*,'*** ERR: oil_plume Salt is out of bound:',salt
+            print*,'float=',l,' isalt=',isalt
+            print*,'ifTvar=',ifTvar
+            print*,'track=',track(:,nfp1,l)
+          ENDIF
+          IF (abs(temp)>50.0_r8) THEN
+            print*,'*** ERR: oil_plume TEMP is out of bound:',temp
+            print*,'float=',l,' itemp=',itemp
+            print*,'track=',track(:,nfp1,l)
+          ENDIF
+
           if (salt.le.0.1_r8) salt=0.1_r8 ! to avoid nans in density
           CALL water_dens0(temp,salt,rhowt)
 
@@ -414,6 +446,13 @@
               print*,'*** ERR: float # l=',l
             ENDIF
           ENDDO
+          IF (frsats<1.e-20 .or. frsats>1.0001) THEN
+            print*,'*** ERR: oil_plume: l=',l,'frsats invalid',frsats
+            print*,'***:  frsats:', track(isats,:,l)
+          ELSE IF (frarom<1.e-20 .or. frarom>1.0001) THEN
+            print*,'*** ERR: oil_plume: l=',l,'frarom invalid',frarom
+            print*,'***:  frarom:', track(iarom,:,l)
+          ENDIF
 ! +++++++
 
 
@@ -492,8 +531,8 @@
 # ifdef OIL_DEBUG
           IF (l.eq.ifltX) THEN
             print*,'    '
-            IF (Predictor) print*,'####  oil_plume: Predictor step'
-            IF (.not.Predictor) print*,'#### oil_plume: Corrector step'
+            IF (Predictor) print*,'####   oil_plume: Predictor step'
+            IF (.not.Predictor) print*,'****  oil_plume: Corrector step'
             print*,'### oil_plume: l=',l,                               & 
      &         'T=',temp, 'S=',salt,                                    &
      &         'RhoWt=',rhowt,'% sats=',frsats,  '% arom=',frarom,      &
@@ -728,8 +767,8 @@
       IF (flgdg) THEN
         print*,' ---    evapor:, surf time, min:',tsrfo1,'flt=',l
         print*,' Evaporated:',PEVC
-        print*,'Weight Oil comp, initial:',Mfr0
-        print*,'Weight Oil comp, new:',Mfr1
+        print*,'Weight Oil comp, kg, initial:',Mfr0
+        print*,'Weight Oil comp, kg, new:',Mfr1
         print*,'Weight Fraction, initial:',Froil0,' Last:',Froil
         print*,'Weight Fraction, new:',Froil1
         print*,'Oil Rho, initial:',rhoo0,' Last:',rhoo

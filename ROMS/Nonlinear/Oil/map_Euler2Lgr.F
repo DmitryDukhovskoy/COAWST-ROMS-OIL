@@ -152,6 +152,7 @@
       real(r8) :: Moil0, Moil1                ! oil mass in 1 grid cell
       real(r8) :: moil_prt0                   ! oil mass in 1 oil particle
       real(r8) :: Nprt_flt          ! # of oil prt in grd cell: Moil=sum(flts)[rhoo*voil*Nprtcl]
+      real(r8) :: dsum
 !      real(r8) :: tsrfo
       real(r8), dimension(Lstr:Lend) :: Voil0, Voil1, Doil0, Doil1,     &
      &                                  Rhoil0, Rhoil1
@@ -232,6 +233,16 @@
           DO i=Istr,Iend
             nfgrd=NFLT3D(i,j,k)
             IF (nfgrd.eq.0) CYCLE
+! Check
+            dsum = 0.0_r8
+            DO ic=1,Nocmp
+              dsum = dsum+Coil1(i,j,k,ic)
+            ENDDO
+            IF (dsum.lt.1.e-30_r8) THEN
+              print*,'map_Eulr2Lgr: ??? ERR: 0 oil grid conc Coil1??', &
+     &        'i,j,k=',i,j,k,' Coil1=',Coil1(i,j,k,:),  &
+     &        ' Coil0=',Coil0(i,j,k,:),' Nflts/grid=',nfgrd
+            ENDIF
 !
 ! Find component reduction during bio/sedimentation processes
 !
@@ -316,6 +327,12 @@
                 wfr1(ic)=rr*wfr0(ic)
                 wsum=wsum+wfr1(ic)
               ENDDO
+! DDMITRY debug
+              IF (wsum.le.1.e-10) THEN
+                print*,'map_Euler2Lagr:ERR: wsum=',wsum,' rCoil=',rCoil,&
+     &          ' wfr0=',wfr0,' l=',l
+              ENDIF
+! END DD
 !
               wfr1=wfr1/wsum
 

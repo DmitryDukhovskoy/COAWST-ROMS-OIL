@@ -1,6 +1,7 @@
 #include "cppdefs.h"
       MODULE wdrift_floats_mod
-#if defined FLOAT_OIL && (defined BULK_FLUXES || defined BULK_FLUXES2D)
+#if defined FLOAT_OIL && (defined OIL_WDRIFT || \
+    defined BULK_FLUXES)
 !
 !
 !================================================== Dmitry Dukhovskoy  ===
@@ -310,7 +311,7 @@
         print*,':: Old float location i=',ixold,' j=',iyold
         print*,':: Adjusted float location i=',track(ixgrd,nfindx,l),   &
      &           'j=',track(iygrd,nfindx,l)
-        print*,':: Depth old location=',zflt0,' new=',zflt1
+        print*,':: Bot. Depth old location=',zflt0,' new=',zflt1
         print*,'  =============  END WIND DRIFT ========= '
       ENDIF
 # endif

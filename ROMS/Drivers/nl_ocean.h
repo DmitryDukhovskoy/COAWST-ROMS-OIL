@@ -182,13 +182,13 @@
 #  ifdef _OPENMP
 	  chunk_size=(Nfloats(ng)+numthreads-1)/numthreads
           Lstr=1+MyThread*chunk_size
-	  Lend=MIN(Nfloats(ng),Lstr+chunk_size-1)
+          Lend=MIN(Nfloats(ng),Lstr+chunk_size-1)
 #  else
           Lstr=1
 	  Lend=Nfloats(ng)
 #  endif
 !          print*,'Ngrids=',Ngrids,'Nfloats=',Nfloats
-	  CALL oil_param_initialize(ng,Lstr,Lend)
+           CALL oil_param_initialize(ng,Lstr,Lend)
         ENDDO
 ! DD END
 #endif

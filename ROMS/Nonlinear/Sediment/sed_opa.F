@@ -231,7 +231,8 @@
 
       epsilon8=epsilon(1.0)
       oil_mass = 0.0_r8        ! DDMITRY
-! DDMITRY TESTING oil changes
+      wfr0 = 0.0_r8
+! DDMITRY 
 # ifdef OIL_MAP_DEBUG
       dCoil   = 0.0_r8
 # endif          
@@ -242,6 +243,8 @@
           DO k=1,N(ng)
             dmm=0.0_r8
             DO icc=1,Nocmp
+              IF (Coil(i,j,k,icc).lt.1.0e-20_r8)                        &
+     &              Coil(i,j,k,icc)=1.0e-20_r8        ! to avoid inf in solutions, keep low background
               dmm=dmm+Coil(i,j,k,icc)
             ENDDO
             DO icc=1,Nocmp
@@ -383,6 +386,7 @@
           oil_rho = 1.0_r8/dmm 
           oil_vol = pi/6.0_r8*(Doil(i,j,k))**3.0_r8  ! m3
           oil_mass(i,j,k) = oil_vol*oil_rho
+          IF (oil_mass(i,j,k).lt.1.0e-20_r8) oil_mass(i,j,k)=1.0e-20_r8 ! keep small backgr mass avoid inf
           SEDOPA(ng) % oil_diam = Doil(i,j,k)  ! m
           SEDOPA(ng) % oil_vol  = oil_vol  ! m3
           SEDOPA(ng) % oil_mass = oil_mass(i,j,k)
@@ -663,6 +667,14 @@
             DO i=Istr,Iend
                Coil(i,j,k,icc) = susoil(i,k)*wfr0(i,j,k,icc)  ! DDMITRY
 # ifdef OIL_MAP_DEBUG
+! DDMITRY debug
+               IF (dCoil(i,j,k,icc).gt.1.e-20 .and. & 
+     &             Coil(i,j,k,icc).lt.1.e-20) THEN
+                 print*,'sedopa: ?? ERR ?? new Coil=0',Coil(i,j,k,icc),&
+     &           ' old Coil=',dCoil(i,j,k,icc),  &
+     &           'i,j,k,icc=',i,j,k,icc, 'susoil=',susoil(i,k), &
+     &           'wfr0=',wfr0(i,j,k,icc),'oil mass=',oil_mass(i,j,k)
+               ENDIF
                dCoil(i,j,k,icc) = Coil(i,j,k,icc)/dCoil(i,j,k,icc) ! DDMITRY
 # endif
             ENDDO

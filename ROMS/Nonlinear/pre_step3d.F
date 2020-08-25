@@ -377,8 +377,21 @@
 #  ifdef OFFLINE_BIOLOGY
       T_LOOP1 :DO ibt=1,NBT
         itrc=idbio(ibt)
-#  elif defined OFFLINE_TPASSIVE
+#  elif defined OFFLINE_TPASSIVE 
       T_LOOP1 :DO itrc=NAT+1,NAT+NPT
+! DDMITRY CPP flags for offline sed/bio
+# elif defined OFFLINE && defined OIL_BIO && defined OIL_SEDIMENT 
+      T_LOOP1 :DO itrc=NAT+1,NAT+NST+NBT
+          IF (LtracerCLM(itrc,ng)) CYCLE
+# elif defined OFFLINE && defined OIL_BIO && !defined OIL_SEDIMENT
+      T_LOOP1 :DO ibt=1,NBT
+          itrc=idbio(ibt)
+          IF (LtracerCLM(itrc,ng)) CYCLE
+# elif defined OFFLINE && defined OIL_SEDIMENT && !defined OIL_BIO
+      T_LOOP1 :DO ist=1,NST
+          itrc=idsed(ist)
+          IF (LtracerCLM(itrc,ng)) CYCLE
+! END DD
 #  else
       T_LOOP1 :DO itrc=1,NT(ng)
 #  endif
@@ -671,6 +684,19 @@
           itrc=idbio(ibt)
 #elif defined OFFLINE_TPASSIVE
         T_LOOP2: DO itrc=NAT+1,NAT+NPT
+! DDMITRY CPP flags for offline sed/bio
+# elif defined OFFLINE && defined OIL_BIO && defined OIL_SEDIMENT 
+        T_LOOP2 :DO itrc=NAT+1,NAT+NST+NBT
+          IF (LtracerCLM(itrc,ng)) CYCLE
+# elif defined OFFLINE && defined OIL_BIO && !defined OIL_SEDIMENT
+        T_LOOP2 :DO ibt=1,NBT
+          itrc=idbio(ibt)
+          IF (LtracerCLM(itrc,ng)) CYCLE
+# elif defined OFFLINE && defined OIL_SEDIMENT && !defined OIL_BIO
+        T_LOOP2 :DO ist=1,NST
+          itrc=idsed(ist)
+          IF (LtracerCLM(itrc,ng)) CYCLE
+! END DD  
 #else
         T_LOOP2: DO itrc=1,NT(ng)
 #endif
@@ -1051,6 +1077,20 @@
           itrc=idbio(ibt)
 #elif defined OFFLINE_TPASSIVE
         DO itrc=NAT+1,NAT+NPT
+! DDMITRY CPP flags for offline sed/bio
+# elif defined OFFLINE && defined OIL_BIO && defined OIL_SEDIMENT 
+        DO itrc=NAT+1,NAT+NST+NBT
+          IF (LtracerCLM(itrc,ng)) CYCLE
+# elif defined OFFLINE && defined OIL_BIO && !defined OIL_SEDIMENT
+        DO ibt=1,NBT
+          itrc=idbio(ibt)
+          IF (LtracerCLM(itrc,ng)) CYCLE
+# elif defined OFFLINE && defined OIL_SEDIMENT && !defined OIL_BIO
+        DO ist=1,NST
+          itrc=idsed(ist)
+          IF (LtracerCLM(itrc,ng)) CYCLE
+! END DD  
+
 #else
         DO itrc=1,NT(ng)
 #endif
@@ -1122,7 +1162,12 @@
         END DO
       END DO
 # endif /* !TS_FIXED */
-# if !defined OFFLINE_BIOLOGY && !defined OFFLINE_TPASSIVE
+! DDMITRY CPP for offline sed/bio - skip the following 3D
+!  for any offline, not only OFFLINE_BIO or TPASSIVE - e.g.
+! OFFLINE no bio/tpassive - floats only, or offline sediment or
+! offline csomio bio
+!# if !defined OFFLINE_BIOLOGY && !defined OFFLINE_TPASSIVE 
+# if !defined OFFLINE
 !
 !=======================================================================
 !  3D momentum equation in the XI-direction.
@@ -1348,6 +1393,19 @@
         itrc=idbio(ibt)
 #  elif defined OFFLINE_TPASSIVE
       DO itrc=NAT+1,NAT+NPT
+! DDMITRY CPP flags for offline sed/bio
+# elif defined OFFLINE && defined OIL_BIO && defined OIL_SEDIMENT 
+      DO itrc=NAT+1,NAT+NST+NBT
+          IF (LtracerCLM(itrc,ng)) CYCLE
+# elif defined OFFLINE && defined OIL_BIO && !defined OIL_SEDIMENT
+      DO ibt=1,NBT
+          itrc=idbio(ibt)
+          IF (LtracerCLM(itrc,ng)) CYCLE
+# elif defined OFFLINE && defined OIL_SEDIMENT && !defined OIL_BIO
+      DO ist=1,NST
+          itrc=idsed(ist)
+          IF (LtracerCLM(itrc,ng)) CYCLE
+! END DD  
 #  else
       DO itrc=1,NT(ng)
 #  endif

@@ -221,7 +221,7 @@
       AttName(1)='scale_factor'
       AttName(2)='add_offset  '
       AttName(3)='_FillValue  '
-
+!
       CALL netcdf_get_fatt (ng, model, ncname, ncvarid, AttName,        &
      &                      AttValue, foundit,                          &
      &                      ncid = ncid)
@@ -670,6 +670,7 @@
 !  Set first and last grid point according to staggered C-grid
 !  classification. Set loops offsets.
 !
+
       MyType=gtype
 
       SELECT CASE (ABS(MyType))
@@ -751,6 +752,7 @@
 !  If the "_FillValue" attribute is present, the data having this value
 !  is treated as missing and it is replaced with zero. This feature it
 !  is usually related with the land/sea masking.
+!
 !
       AttName(1)='scale_factor'
       AttName(2)='add_offset  '
@@ -854,6 +856,7 @@
 !  Serial I/O: Read in requested field and scale it.
 !-----------------------------------------------------------------------
 !
+!
       status=nf90_noerr
       IF (InpThread) THEN
         status=nf90_get_var(ncid, ncvarid, wrk, start, total)
@@ -871,8 +874,11 @@
           END DO
         END IF
       END IF
+!
 # ifdef DISTRIBUTE
+
       CALL mp_bcasti (ng, model, status)
+
 # endif
       IF (FoundError(status, nf90_noerr, __LINE__,                      &
      &               __FILE__)) THEN
@@ -894,6 +900,7 @@
      &                     NWpts, SCALARS(ng)%IJwater(:,wtype),         &
 #  endif
      &                     Npts, wrk, A)
+
 # else
         IF (MyType.gt.0) THEN
           ic=0

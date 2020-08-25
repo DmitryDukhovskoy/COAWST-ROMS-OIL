@@ -99,6 +99,10 @@
 #ifdef BIOLOGY
       USE mod_biology, ONLY : idbio
 #endif
+! DDMITRY
+#ifdef SEDIMENT
+      USE mod_sediment, ONLY: idsed
+#endif
 
 #ifdef DISTRIBUTE
 !
@@ -161,8 +165,9 @@
 !
 !  Local variable declarations.
 !
-#ifdef BIOLOGY
-      integer :: ibt, itrc
+! DDMITRY add sed diagn
+#if defined BIOLOGY | defined SEDIMENT
+      integer :: ibt, itrc, isd
 #endif
       integer :: NSUB, i, ispace, j, k, trd
       integer :: my_max_Ci, my_max_Cj, my_max_Ck
@@ -199,6 +204,9 @@
 # ifdef BIOLOGY
       real(r8) :: my_maxbio(NBT)
 # endif
+# ifdef SEDIMENT
+      real(r8) :: my_maxsed(NST)
+# endif
 #endif
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: ke2d
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: pe2d
@@ -218,6 +226,10 @@
 #ifdef DISTRIBUTE
 # ifdef BIOLOGY
       Nreduce = 6 + NBT
+# endif
+! DDMITRY
+# ifdef SEDIMENT
+      Nreduce = Nreduce + NST
 # endif
      IF (.not. allocated(buffer))    allocate (buffer(Nreduce))
      IF (.not. allocated(op_handle)) allocate (op_handle(Nreduce))
@@ -241,6 +253,12 @@
         DO ibt=1,NBT
           my_maxbio(ibt)=-spval
         END DO
+# endif
+! DDMITRY
+# ifdef SEDIMENT
+        DO isd=1,NST
+          my_maxsed(isd)=-spval
+        ENDDO
 # endif
 #endif
         DO j=Jstr,Jend
@@ -287,6 +305,17 @@
               itrc=idbio(ibt)
               DO i=Istr,Iend
                 my_maxbio(ibt)=MAX(my_maxbio(ibt),t(i,j,k,nstp,itrc))
+              END DO
+            END DO
+          END DO
+# endif
+# ifdef SEDIMENT
+! DDMITRY add sediment diag
+          DO k=N(ng),1,-1
+            DO isd=1,NST
+              itrc=idsed(isd)
+              DO i=Istr,Iend
+                my_maxsed(isd)=MAX(my_maxsed(isd),t(i,j,k,nstp,itrc))
               END DO
             END DO
           END DO
@@ -392,6 +421,12 @@
             maxbio(ibt,ng)=0.0_r8
           END DO
 # endif
+# ifdef SEDIMENT
+! DDMITRY add sediment diag
+          DO isd=1,NST
+            maxsed(isd,ng)=0.0_r8
+          ENDDO
+# endif
 #endif
 !!          max_C =my_max_C
 !!          max_Cu=my_max_Cu
@@ -414,6 +449,12 @@
 # ifdef BIOLOGY
           DO ibt=1,NBT
             maxbio(ibt,ng)=MAX(maxbio(ibt,ng),my_maxbio(ibt))
+          END DO
+# endif
+# ifdef SEDIMENT
+! DDMITRY add sediment diag
+          DO isd=1,NST
+            maxsed(isd,ng)=MAX(maxsed(isd,ng),my_maxsed(isd))
           END DO
 # endif
 #endif
@@ -452,6 +493,19 @@
             buffer(5+ibt)=maxbio(ibt,ng)
           END DO
 #  endif
+!! DDMITRY
+#  if defined SEDIMENT 
+#   if !defined BIOLOGY
+          DO isd=1,NST
+            buffer(5+isd)=maxsed(isd,ng)
+          END DO
+#   else
+          DO isd=1,NST
+            buffer(5+NBT+isd)=maxsed(isd,ng)
+          END DO
+#   endif
+#  endif
+!! END DD
 # endif
           op_handle(1)='SUM'
           op_handle(2)='SUM'
@@ -464,6 +518,20 @@
             op_handle(5+ibt)='MAX'
           END DO
 #  endif
+!! DDMITRY
+#  if defined SEDIMENT 
+#   if !defined BIOLOGY
+          DO isd=1,NST
+            op_handle(5+isd)='MAX'
+          END DO
+#   else
+          DO isd=1,NST
+            op_handle(5+NBT+isd)='MAX'
+          END DO
+#   endif
+#  endif
+!! END DD
+  
 # endif
           CALL mp_reduce (ng, iNLM, Nreduce, buffer, op_handle)
           volume=buffer(1)
@@ -477,6 +545,18 @@
             maxbio(ibt,ng)=buffer(5+ibt)
           END DO
 #  endif
+! DDMITRY 
+# ifdef SEDIMENT
+#   if !defined BIOLOGY
+         DO isd=1,NST
+           maxsed(isd,ng)=buffer(5+isd)
+         ENDDO
+#   else
+         DO isd=1,NST
+           maxsed(isd,ng)=buffer(5+NBT+isd)
+         ENDDO
+#   endif
+# endif
 # endif
 !
           Courant(1)=max_C
@@ -645,6 +725,17 @@
             END IF
           END DO
 # endif
+! DDMITRY
+# ifdef SEDIMENT
+          DO isd=1,NST
+            IF (maxsed(isd,ng).gt.max_sed(isd)) THEN
+              IF (Master) print*, 'SEDIMENT too high values DIAG.F',    &
+     &          maxsed(:,ng)
+              exit_flag=1
+            ENDIF
+          ENDDO
+# endif
+! END DD
 #endif
 !
 !  Reset global reduction variables for the next call.

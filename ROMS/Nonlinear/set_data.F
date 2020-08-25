@@ -54,6 +54,7 @@
       USE mod_mixing
       USE mod_ncparam
       USE mod_ocean
+      USE mod_parallel  ! DDMITRY
       USE mod_stepping
       USE mod_scalars
       USE mod_sources
@@ -119,7 +120,9 @@
       real(r8) :: Akstemp(LBi:UBi,LBj:UBj,0:N(ng))
 #  endif
 # endif
-
+! DDMITRY debug
+      integer :: inn
+! END DD
 # include "set_bounds.h"
 !
 !  Lower and upper bounds for nontiled (global values) boundary arrays.
@@ -2189,11 +2192,25 @@
 #   endif
 #  endif
       END IF
+#  if defined OFFLINE && defined OIL_DEBUG
+! DDMITRY debug
+!      i=IstrR+10
+!      j=JstrR+15
+!      k=50
+!      if (Master) then
+!      print*,'nrhs=',nrhs,'nnew=',nnew,' i=',i,' j=',j
+!      print*, 'u(i,j,k,nrhs)=',OCEAN(ng)%u(i,j,k,nrhs(ng))
+!      print*, 'u(i,j,k,nnew)=',OCEAN(ng)%u(i,j,k,nnew(ng))
+!      print*, 'v(i,j,k,nrhs)=',OCEAN(ng)%v(i,j,k,nrhs(ng))
+!      print*, 'v(i,j,k,nnew)=',OCEAN(ng)%v(i,j,k,nnew(ng))
+!      endif
+! END DD
+# endif
 !
-!-----------------------------------------------------------------------
-!  Set tracers climatology.
-!  KMT don't need temp/salt for offline case
-!-----------------------------------------------------------------------
+!!-----------------------------------------------------------------------
+!!  Set tracers climatology.
+!!  KMT don't need temp/salt for offline case
+!!-----------------------------------------------------------------------
 !
 #  ifdef ANA_TCLIMA
       IF (ANY(LtracerCLM(:,ng))) THEN
@@ -2213,6 +2230,17 @@
      &                   __FILE__)) RETURN
         END IF
       END DO
+! DDMITRY debug
+      i=LBi+10
+      j=LBj+15
+      k=50
+      if (Master) then
+!        print*,'set_data: nrhs=',nrhs,'nnew=',nnew,'i=',i,' j=',j,'k=',k
+        DO inn=1,NAT
+          print*,'set_data:inn=',inn,'OCEAN%Tr=',OCEAN(ng)%t(i,j,k,:,inn)
+        ENDDO
+      endif
+! END DD
 #  endif
 
 #  if defined OFFLINE && defined ATCLIMATOLOGY  
@@ -2227,7 +2255,8 @@
             ENDDO       
           ENDDO 
         ENDDO   
-      ENDDO     
+      ENDDO    
+!  
       IF (EWperiodic(ng).or.NSperiodic(ng)) THEN        
         DO itrc=1,NAT   
           DO i=1,2      
@@ -2337,6 +2366,77 @@
 #  endif
 # endif
 
+! DJ
+! DDMITRY - changed oil definitions
+
+# if defined OFFLINE && defined FLOAT_OIL && defined OIL_WDRIFT
+
+!-----------------------------------------------------------------------
+!  Set surface winds (m/s).
+!-----------------------------------------------------------------------
+!
+#   ifdef ANA_WINDS
+      CALL ana_winds (ng, tile, iNLM)
+#   else
+!      IF (Master) print*,'set_2dfld: surface winds'
+      CALL set_2dfld_tile (ng, tile, iNLM, idUair,                      &
+     &                     LBi, UBi, LBj, UBj,                          &
+     &                     CLIMA(ng)%UwindG,                            &
+     &                     CLIMA(ng)%Uwind,                             &
+     &                     update)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &               __FILE__)) RETURN
+
+      CALL set_2dfld_tile (ng, tile, iNLM, idVair,                      &
+     &                     LBi, UBi, LBj, UBj,                          &
+     &                     CLIMA(ng)%VwindG,                            &
+     &                     CLIMA(ng)%Vwind,                             &
+     &                     update)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &               __FILE__)) RETURN
+
+#    ifdef CURVGRID
+!
+!  If input point surface winds or interpolated from coarse data, rotate
+!  to curvilinear grid.
+!
+      IF (.not.Linfo(1,idUair,ng).or.                                   &
+     &    (Iinfo(5,idUair,ng).ne.Lm(ng)+2).or.                          &
+     &    (Iinfo(6,idUair,ng).ne.Mm(ng)+2)) THEN
+        DO j=JstrR,JendR
+          DO i=IstrR,IendR
+            cff1=FORCES(ng)%Uwind(i,j)*GRID(ng)%CosAngler(i,j)+         &
+     &           FORCES(ng)%Vwind(i,j)*GRID(ng)%SinAngler(i,j)
+            cff2=FORCES(ng)%Vwind(i,j)*GRID(ng)%CosAngler(i,j)-         &
+     &           FORCES(ng)%Uwind(i,j)*GRID(ng)%SinAngler(i,j)
+            FORCES(ng)%Uwind(i,j)=cff1
+            FORCES(ng)%Vwind(i,j)=cff2
+          END DO
+        END DO
+
+        IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+          CALL exchange_r2d_tile (ng, tile,                             &
+     &                            LBi, UBi, LBj, UBj,                   &
+     &                            FORCES(ng)%UWind)
+          CALL exchange_r2d_tile (ng, tile,                             &
+     &                            LBi, UBi, LBj, UBj,                   &
+     &                            FORCES(ng)%VWind)
+        END IF
+
+#     ifdef DISTRIBUTE
+        CALL mp_exchange2d (ng, tile, iNLM, 2,                          &
+     &                      LBi, UBi, LBj, UBj,                         &
+     &                      NghostPoints,                               &
+     &                      EWperiodic(ng), NSperiodic(ng),             &
+     &                      FORCES(ng)%UWind,                           &
+     &                      FORCES(ng)%VWind)
+#     endif
+      END IF
+#    endif
+#   endif
+#  endif
+
+
 # if defined SOLVE3D && defined OFFLINE
 !
 !-----------------------------------------------------------------------
@@ -2414,11 +2514,19 @@
           DO i=Istr-1,Iend+1
 #  if defined AKTCLIMATOLOGY || defined AKXCLIMATOLOGY
             MIXING(ng)%Akt(i,j,k,1) = CLIMA(ng)%AKtclm(i,j,k)
+! DDMITRY - 0 Akt causes blow ups
+            IF (MIXING(ng)%Akt(i,j,k,1).le.1.e-7)  &
+     &          MIXING(ng)%Akt(i,j,k,1)=1.e-7
+! END DD
             ! KMT save subsequent time step
             MIXING(ng)%gls(i,j,k,nnew(ng)) = Akttemp(i,j,k)
 #  endif
 #  if defined AKSCLIMATOLOGY || defined AKXCLIMATOLOGY
             MIXING(ng)%Akt(i,j,k,2) = CLIMA(ng)%AKsclm(i,j,k)
+! DDMITRY - 0 Akt causes blow ups
+            IF (MIXING(ng)%Akt(i,j,k,2).le.1.e-7)  &
+     &          MIXING(ng)%Akt(i,j,k,2)=1.e-7
+! END DD
             ! KMT save subsequent time step
             MIXING(ng)%gls(i,j,k,3) = Akstemp(i,j,k)
 #  endif
@@ -2436,6 +2544,18 @@
           ENDDO
         ENDDO
       ENDDO
+
+#  if defined OFFLINE && defined OIL_DEBUG && defined AKTCLIMATOLOGY
+! DDMITRY debug
+!      i=IstrR+10
+!      j=JstrR+15
+!      k=50
+!      if (Master) then
+!        print*, 'set_data: Akt(i,j,k,:)=',MIXING(ng)%Akt(i,j,k,:)
+!      endif
+! END DD
+# endif
+
 
       IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
 #  if defined AKTCLIMATOLOGY || defined AKXCLIMATOLOGY

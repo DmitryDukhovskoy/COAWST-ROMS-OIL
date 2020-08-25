@@ -161,6 +161,11 @@
 # else
       logical, parameter :: Lmask = .FALSE.
 # endif
+#ifdef OIL_DEBUG
+! DDMITRY debug
+      integer :: Irn, Jrn, Krn
+#endif
+
       integer :: LBi, UBi, LBj, UBj
       integer :: i, l, nfindx
       integer :: ierr
@@ -222,6 +227,20 @@
      &                    MIXING(ng) % Akt(:,:,:,itemp),                &
      &                    my_thread, bounded, track)
 
+!# ifdef OIL_DEBUG
+! DDMITRY debug
+!      DO l=Lstr,Lend
+!        IF (l.eq.ifltX .and. bounded(l)) THEN
+!          Irn=NINT(track(ixgrd,nfindx,l))
+!          Jrn=NINT(track(iygrd,nfindx,l))
+!          Krn=NINT(track(izgrd,nfindx,l))
+!          print*,'vwalk_fl: i,j,k: ',Irn,Jrn,Krn,  & 
+!     &            'Akt=',MIXING(ng)%Akt(Irn,Jrn,Krn,:)
+!          print*,'vwalk_fl: track(ifakt)=',track(ifakt,nfindx,l)
+!        ENDIF
+!      ENDDO
+! END DD
+!# endif
       CALL interp_floats (ng, LBi, UBi, LBj, UBj, 1, N(ng),             &
      &                    Lstr, Lend, nfindx, ifdak, isBr3d,            &
      &                    r3dvar, Lmask, spval, nudg,                   &
@@ -233,6 +252,23 @@
 # endif
      &                    MIXING(ng) % dAktdz,                          &
      &                    my_thread, bounded, track)
+
+!# ifdef OIL_DEBUG
+! DDMITRY debug
+!      DO l=Lstr,Lend
+!        IF (l.eq.ifltX) THEN
+!          Irn=NINT(track(ixgrd,nfindx,l))
+!          Jrn=NINT(track(iygrd,nfindx,l))
+!          Krn=NINT(track(izgrd,nfindx,l))
+!          IF (bounded(l)) THEN
+!            print*,'vwalk_fl: dAkt=',MIXING(ng)%dAktdz(Irn,Jrn,Krn)
+!            print*,'valk_fl: track(ifdak)=',track(ifdak,nfindx,l),    &
+!     &           'bounded=',bounded(l)
+!          ENDIF
+!        ENDIF
+!      ENDDO
+! END DD
+!# endif
 !
 !  Compute nudging velocity coefficients. Use normally distributed
 !  random numbers.

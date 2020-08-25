@@ -119,9 +119,14 @@
       USE lagr2euler_mod
       USE metrics_oil_mod
       USE euler2lagr_mod  !
+      USE mod_ocean  ! debug
 #   ifdef OIL_BIO
       USE bio_oil_mod
 #   endif
+# if defined OIL_DEBUG
+!      USE mod_param
+      USE check_tracer_mod
+# endif
 ! END DD
 # endif
       USE wvelocity_mod, ONLY : wvelocity
@@ -145,6 +150,11 @@
       integer :: Lend, Lstr, chunk_size
 ! DDMITRY
       real(r8) :: Tstart, Tfinish
+#  if defined OIL_DEBUG
+      integer :: lfl, ii, jj, kk, inn
+      real(r8) :: dmm, tmin, tmax, smin, smax
+      real(r8) :: tmn1,tmx1,tmn2,tmx2,tmn3,tmx3
+#  endif
 ! ENDD
 # endif
       real(r8) :: my_StepTime
@@ -156,7 +166,6 @@
 !=======================================================================
 !
       my_StepTime=0.0_r8
-
       STEP_LOOP : DO WHILE (my_StepTime.le.RunInterval)
 
         my_StepTime=my_StepTime+MAXVAL(dt)
@@ -234,7 +243,7 @@
         END DO
 !-----------------------------------------------------------------------
 !  Compute horizontal mass fluxes (Hz*u/n and Hz*v/m), density related
-!  quatities and report global diagnostics.
+!  quantities and report global diagnostics.
 !-----------------------------------------------------------------------
 !
         DO ng=1,Ngrids
@@ -252,7 +261,8 @@
         CALL nesting (5)
 # endif
 
-# if defined OFFLINE_TPASSIVE || defined OFFLINE_BIOLOGY
+# if defined OFFLINE_TPASSIVE || defined OFFLINE_BIOLOGY || \
+     defined BIOLOGY || defined SEDIMENT || defined OIL_EULR
 !-----------------------------------------------------------------------
 !  Set fields for vertical boundary conditions. Process tidal forcing,
 !  if any.
@@ -301,7 +311,7 @@
           CALL seaice(ng)
         END DO
 #  endif
-# endif
+# endif /* if defined OFFLINE_TPASSE ... */
 !
 !-----------------------------------------------------------------------
 !  Compute time-dependent vertical/horizontal mixing coefficients for
@@ -311,7 +321,9 @@
 !
         DO ng=1,Ngrids
           DO tile=first_tile(ng),last_tile(ng),+1
-# if defined OFFLINE_TPASSIVE || defined OFFLINE_BIOLOGY
+!! DDMITRY cpp flags
+# if defined OFFLINE_TPASSIVE || defined OFFLINE_BIOLOGY || \
+     defined BIOLOGY || defined SEDIMENT 
 #  if defined ANA_VMIX
             CALL ana_vmix (ng, tile, iNLM)
 #  elif defined LMD_MIXING
@@ -377,10 +389,18 @@
 !  Compute right-hand-side terms for 3D equations.
 !-----------------------------------------------------------------------
 !
-# if defined OFFLINE_TPASSIVE || defined OFFLINE_BIOLOGY
+! DDMITRY - CPP flags for oil bio sed
+# if defined OFFLINE_TPASSIVE || defined OFFLINE_BIOLOGY || \
+     defined BIOLOGY || defined SEDIMENT || defined OIL_EULR 
         DO ng=1,Ngrids
           DO tile=first_tile(ng),last_tile(ng),+1
             CALL rhs3d (ng, tile)
+!#   ifdef OIL_DEBUG
+! DDMITRY debug
+!           IF (Master) CALL check_tracer(ng,'4) main3d_off') 
+! END DD
+!#   endif
+
 #  if !defined OFFLINE && ( !defined MIXCLIMATOLOGY || !defined AKXCLIMATOLOGY )
 #   ifdef MY25_MIXING
             CALL my25_prestep (ng, tile)
@@ -391,10 +411,9 @@
           END DO
 !$OMP BARRIER
         END DO
-#  ifdef NESTING
+#   ifdef NESTING
         CALL nesting (12)
-#  endif
-
+#   endif
 
 !
 !-----------------------------------------------------------------------
@@ -450,7 +469,7 @@
 #   elif defined GLS_MIXING
             CALL gls_corstep (ng, tile)
 #   endif
-#  endif
+#  endif /* !defined OFFLINE etc */
 
 ! DDMITRY
 ! -------------------------------------------
@@ -484,7 +503,7 @@
             DO tile=last_tile(ng),first_tile(ng),-1
 #   ifdef OIL_MAP_DEBUG
               IF (Master) THEN
-                print*,' =========  Calling euler2lagr ====='
+                print*,'=========  Calling euler2lagr ====='
                 CALL CPU_TIME(Tstart)
               ENDIF
 #   endif
@@ -500,13 +519,13 @@
             ENDDO  ! tile 
 !$OMP BARRIER
           END IF  ! IF Lfloats
-#  endif
+#  endif /* FLOAT_OIL OIL_EULR*/
         END DO  ! ng
 ! END DD
 #  ifdef NESTING
         CALL nesting (17)
 #  endif
-# endif
+# endif /* defined OFFLINE_TPASSIVE || defined OFFLINE_BIOLOGY*/
 
 # ifndef TS_FIXED
 !
@@ -514,7 +533,9 @@
 !  Time-step tracer equations.
 !-----------------------------------------------------------------------
 !
-#  if defined OFFLINE_TPASSIVE || defined OFFLINE_BIOLOGY
+! DDMITRY - CPP flags for oil bio and sed
+#  if defined OFFLINE_TPASSIVE || defined OFFLINE_BIOLOGY || \
+      defined BIOLOGY || defined SEDIMENT
         DO ng=1,Ngrids
           DO tile=first_tile(ng),last_tile(ng),+1
             CALL step3d_t (ng, tile)
@@ -524,11 +545,12 @@
           END DO
 !$OMP BARRIER
         END DO
+!
 #   ifdef NESTING
         CALL nesting (18)
 #   endif
 #  endif
-# endif
+# endif /* ifndef TS_FIXED */
 
 # ifdef OFFLINE_FLOATS
 !
@@ -553,10 +575,9 @@
 #  if defined FLOAT_OIL && defined OIL_DEBUG
 ! DDMITRY
             IF (Master) THEN
-              print*,' Calling step_floats, Rank=',MyRank
+              print*,' Calling step_floats'
             ENDIF
 #  endif
-
             CALL step_floats (ng, Lstr, Lend)
 
 #  if defined FLOAT_OIL && defined OIL_EULR 
@@ -575,7 +596,7 @@
 #   ifdef OIL_MAP_DEBUG
               IF (Master) THEN
                 CALL CPU_TIME(Tfinish)
-!                     print*,'lagr2euler done: '
+!
                 print '("lagr2euler done, CPU Time: ",                  & 
      &                       f8.6," sec")',Tfinish-Tstart
                 print*,' ^^^^^^^^^^^^^  '
@@ -586,7 +607,7 @@
                 CALL metrics_oil (ng, tile, iNLM, Lstr, Lend)
               ENDIF
             ENDDO  ! tile
-
+#  endif
 !$OMP BARRIER
 !
 !  Shift floats time indices.
@@ -596,10 +617,11 @@
             nfm1(ng)=MOD(nfm1(ng)+1,NFT+1)
             nfm2(ng)=MOD(nfm2(ng)+1,NFT+1)
             nfm3(ng)=MOD(nfm3(ng)+1,NFT+1)
-#  endif
-# endif
+
           END IF  ! Lfloats
         END DO  ! ng
+# endif /* ifdef OFFLINE_FLOATS */
+
       END DO STEP_LOOP
 
       RETURN

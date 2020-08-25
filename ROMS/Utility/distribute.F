@@ -4400,7 +4400,6 @@
               np=np+1
               ic=i+Ioff+jc
               Awrk(ic)=Asend(np)
-! DDMITRY              print*,'distribute: np=',np,' Awrk(ic)=',Awrk(ic)
             END DO
           END DO
         END DO
@@ -6029,7 +6028,7 @@
 # if defined READ_WATER && defined MASKING
      &                         NWpts, IJ_water,                         &
 # endif
-     &                         Npts, A, Awrk)
+     &                         Npts, A, Awrk) 
 !
 !***********************************************************************
 !                                                                      !
@@ -6087,7 +6086,7 @@
 # endif
       real(r8), intent(inout) :: Amin, Amax
       real(r8), intent(inout) :: A(Npts+2)
-      real(r8), intent(out) :: Awrk(LBi:UBi,LBj:UBj)
+      real(r8), intent(out) :: Awrk(LBi:UBi,LBj:UBj) 
 !
 !  Local variable declarations.
 !
@@ -6167,6 +6166,7 @@
 !  Set physical, non-overlapping (Nghost=0) or overlapping (Nghost>0)
 !  ranges according to tile rank.
 !
+! p2dvar = 1, r2dvar = 2, udvar = 3
       IF (Nghost.eq.0) THEN
         ghost=0                                   ! non-overlapping
       ELSE
@@ -6240,6 +6240,7 @@
         exit_flag=2
         RETURN
       END IF
+
 !
 !  If water points only, fill land points.
 !

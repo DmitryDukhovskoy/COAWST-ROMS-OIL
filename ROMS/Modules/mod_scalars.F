@@ -549,6 +549,11 @@
         real(r8), allocatable :: maxbio(:,:)
         real(r8), allocatable :: max_bio(:)
 #endif
+! DDMITRY
+#ifdef SEDIMENT
+        real(r8), allocatable :: maxsed(:,:)
+        real(r8), allocatable :: max_sed(:)
+#endif
 !
 !  Interpolation scheme.
 !
@@ -2329,7 +2334,11 @@
       allocate ( maxbio(NBT, Ngrids) )
       allocate ( max_bio(NBT) )
 #endif
-
+! DDMITRY
+#ifdef SEDIMENT
+      allocate ( maxsed(NST, Ngrids) )
+      allocate ( max_sed(NBT) )
+#endif
       allocate ( gls_m(Ngrids) )
       allocate ( gls_n(Ngrids) )
       allocate ( gls_p(Ngrids) )
@@ -2860,6 +2869,17 @@
       END DO
       DO itrc=1,NBT
         max_bio(itrc) = 10000.0_r8   ! bio units
+      END DO
+#endif
+! DDMITRY
+#ifdef SEDIMENT
+      DO ng=1,Ngrids
+        DO itrc=1,NST
+          maxsed(itrc, ng) = IniVal
+        END DO
+      END DO
+      DO itrc=1,NST
+        max_sed(itrc) = 1.0e10_r8   ! sed units
       END DO
 #endif
 

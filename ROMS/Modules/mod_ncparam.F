@@ -1275,7 +1275,6 @@
 #if defined AKTCLIMATOLOGY || defined AKXCLIMATOLOGY
             CASE ('idAKtclm')  !Added by DJ
               idAKtclm=varid
-              print*,'idAKtclm=',idAKtclm       ! DD
 #endif
 #if defined AKSCLIMATOLOGY || defined AKXCLIMATOLOGY
             CASE ('idAKsclm')  !Added by DJ

@@ -58,6 +58,7 @@
       logical :: LapplyBC, Lgrided, Lonerec
 
       integer :: Tindex, gtype, i, it1, it2, j, k
+      integer :: ii0, jj0, kk0    ! DDMITRY debug
 
       real(r8) :: Fval, fac, fac1, fac2
 
@@ -148,6 +149,27 @@
             END DO
           END DO
         END IF
+#ifdef OIL_DEBUG
+! DDMITRY  debug
+!        ii0=IstrR+10
+!        jj0=JstrR+15
+!        kk0=50
+!!        IF (Master .and. (trim(Vname(1:3,ifield)).eq.'pot' .or.         &
+!!     &      trim(Vname(1:3,ifield)).eq.'sal')) THEN
+!         i=ii0
+!         j=jj0
+!         k=kk0
+!         print*,'IstrR=',IstrR,' IendR=',IendR, 'JstrR=',JstrR,         &
+!     &       'JendR=',JendR
+!         print*,'set_3dfld: var=',trim(Vname(1,ifield)), & 
+!     &          ' Tindex=',Tindex,' Lgr=',Lgrided
+!         print*,'set_3dfld: fac1=',fac1,' fac2=',fac2,' it1=',it1,      &
+!     &          ' it2=',it2
+!       print*,'Finp1(i,j,k)=',Finp(i,j,k,it1),'Finp2=',Finp(i,j,k,it2),&
+!              'Fout=',Fout(i,j,k)
+!!        ENDIF
+! ENDD
+#endif
 !
 !  Activate synchronization flag if a new time record needs to be
 !  read in at the next time step.

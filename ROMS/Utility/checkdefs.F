@@ -60,7 +60,14 @@
       Coptions(is:is+lstr)=TRIM(ADJUSTL(MyAppCPP))
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is)=','
-
+! DDMITRY
+#if defined OFFLINE
+      IF (Master) WRITE (stdout,20) 'OFFLINE ',                  &
+     &   'Offline Run'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+18)=' OFFLINE,'
+#endif
+! END DD
 #if defined AD_AVERAGES && defined ADJOINT
 !
       IF (Master) WRITE (stdout,20) 'AD_AVERAGES',                      &

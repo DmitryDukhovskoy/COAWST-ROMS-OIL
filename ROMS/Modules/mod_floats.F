@@ -167,7 +167,7 @@
         integer, parameter :: iywnd = 23         ! surf wind at oil location, v comp
 #   endif
 #  endif
-#endif
+#endif  /* ifndef OFFLINE_FLOATS */
 ! END DD
 !MMMM END  Xu Chen
 
@@ -375,6 +375,8 @@
 !
 !  Indices for tracer variables in the floats array track.
 !
+! DDMITRY - double check indexing for offline
+#ifndef OFFLINE_FLOATS
 # ifdef FLOAT_OYSTER
 #  ifdef FLOAT_VWALK
         ic=18
@@ -395,12 +397,6 @@
 #  else
         ic=19
 #  endif
-        Nocmp      = 0      ! # of oil compnents initial value, set in oil*.in
-        DoilMn     = -999.0 ! mean oil size, set in oil*.in
-        FlxVoilDay = -999.0 ! oil flux rate, m3/day
-        VoilFlt    = -999.0 ! oil volume in 1 float
-        DfsOil     = -999.0 ! oil diffusiv., used in rand walk approxim. 
-        CWndOil    = -999.0 ! wind-oil coefficient
 # else
 #  ifdef FLOAT_VWALK
         ic=12
@@ -408,6 +404,30 @@
         ic=10
 #  endif
 # endif
+#else
+# ifdef FLOAT_OIL
+#  ifdef FLOAT_VWALK
+        ic=25
+#  else
+        ic=23
+#  endif
+# else
+#  ifdef FLOAT_VWALK
+        ic=14
+#  else
+        ic=16
+#  endif
+# endif
+#endif
+
+#ifdef FLOAT_OIL
+        Nocmp      = 0      ! # of oil compnents initial value, set in oil*.in
+        DoilMn     = -999.0 ! mean oil size, set in oil*.in
+        FlxVoilDay = -999.0 ! oil flux rate, m3/day
+        VoilFlt    = -999.0 ! oil volume in 1 float
+        DfsOil     = -999.0 ! oil diffusiv., used in rand walk approxim. 
+        CWndOil    = -999.0 ! wind-oil coefficient
+#endif
 ! DD END
         DO i=1,MT
           ic=ic+1

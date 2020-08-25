@@ -106,10 +106,16 @@
 ! DDMITRY
 # ifdef FLOAT_OIL
       USE oil_floats_mod, ONLY : oil_floats
-#  if defined BULK_FLUXES || defined BULK_FLUXES2D || defined ATM2OCN_FLUXES 
+#  if defined OIL_WDRIFT
       USE wdrift_floats_mod
       USE mod_forces
 #  endif
+#  ifdef OFFLINE
+      USE mod_clima
+#  endif
+# endif
+# ifdef OIL_DEBUG
+      USE check_tracer_mod
 # endif
 ! DD END
 !
@@ -167,9 +173,12 @@
 #  ifdef OIL_DEBUG
       logical :: ldebug
       integer :: Nopts, ifltB, ifltNB, ifltX, ifltE
+      integer :: Kr, itime,itm
       real(r8) :: mxT
+      integer :: lfl
+      real(r8) :: dmm, tmin, tmax, smin, smax
 #  endif
-#  if defined BULK_FLUXES || defined BULK_FLUXES2D || defined ATM2OCN_FLUXES 
+#  if defined OIL_WDRIFT
       integer :: Istr, Iend, Jstr, Jend
 #  endif
 
@@ -245,6 +254,7 @@
       Yend=REAL(BOUNDS(ng)%Jend(MyRank),r8)+0.5_r8
       DO l=Lstr,Lend
         my_thread(l)=.FALSE.
+
         IF ((Xstr.le.track(ixgrd,nf,l)).and.                            &
      &      (track(ixgrd,nf,l).lt.Xend).and.                            &
      &      (Ystr.le.track(iygrd,nf,l)).and.                            &
@@ -257,11 +267,11 @@
 # endif
         ELSE IF (Master.and.(.not.bounded(l))) THEN
           my_thread(l)=.TRUE.
-!# if defined FLOAT_OIL && defined OIL_DEBUG
+# if defined FLOAT_OIL && defined OIL_DEBUG
 ! DDMITRY
-!          ifltNB=ifltNB+1
+          ifltNB=ifltNB+1
 !DD END
-!# endif
+# endif
         ELSE
 # if defined FLOAT_OIL && defined OIL_DEBUG
           ifltE=ifltE+1  ! DDMITRY
@@ -273,16 +283,17 @@
           END DO
         END IF
       END DO
-#  if defined FLOAT_OIL && defined OIL_DEBUG
+!#  if defined FLOAT_OIL && defined OIL_DEBUG
 ! DDMITRY
 !      IF (ifltB.gt.0) THEN      
-!      IF (Master) THEN
-!        print*,'!!! step_floats: MyRank=',MyRank,'Floats bounded=',     &
-!     &         ifltB,'unbounded=',ifltNB,'ELSE=',ifltE
+!          print*,'!!! step_floats: MyRank=',MyRank,'Floats bounded=',   &
+!     &       ifltB,' Lstr/Lend=',Lstr,Lend
+!     &         ifltB,'unbounded=',ifltNB,'ELSE=',ifltE,   &
+!     &         ' NFV=',NFV
 !      ENDIF
 !
-! DD END
-#  endif
+! DD END 
+!#  endif
 
 # else
 !
@@ -302,15 +313,15 @@
 
 # ifdef DIAPAUSE
 
-           RiseStart=   1.0d0  ! Date NC begin to move upward (Day of Year)
-           RiseEnd  =  90.00d0 ! 90 Date NC stop moving upward (Day of Year)
-           SinkStart= 166.0d0  !166 Date NC begin to move downward (Day of Year)
-           SinkEnd  = 365.0d0  ! 365.Date NC stop moving downward (Day of Year)
-           wNCrise  =  10.0d0
-           wNCsink  =  -10.0d0
+      RiseStart=   1.0d0  ! Date NC begin to move upward (Day of Year)
+      RiseEnd  =  90.00d0 ! 90 Date NC stop moving upward (Day of Year)
+      SinkStart= 166.0d0  !166 Date NC begin to move downward (Day of Year)
+      SinkEnd  = 365.0d0  ! 365.Date NC stop moving downward (Day of Year)
+      wNCrise  =  10.0d0
+      wNCsink  =  -10.0d0
 
-           diapW=0.0
-           dtdays = dt(ng)*sec2day
+      diapW=0.0
+      dtdays = dt(ng)*sec2day
 
 # endif
 # if defined SOLVE3D && defined FLOAT_VWALK
@@ -323,45 +334,73 @@
 !
 #  ifdef OIL_DEBUG
 ! DDMITRY
-!      ifltX=12101
-      ifltx=0
+      ifltX=1
       DO l=Lstr,Lend
-        IF (my_thread(l).and.bounded(l)) THEN
+        IF (my_thread(l).and.bounded(l).and.ifltX==0) THEN
           ifltX=l
+          print*,'ifltX=',ifltX
           EXIT
         ENDIF
-      ENDDO  
+      ENDDO 
+!      print*,'step_floats: MyRank=',MyRank,' ifltX=',ifltX 
 ! DD END
 #  endif
-#  if defined FLOAT_OIL
+!#  if defined FLOAT_OIL
+!#  ifdef OIL_DEBUG
+! DDMITRY
+!      DO l=Lstr,Lend
+!        IF (my_thread(l).and.(l.eq.ifltX)) THEN
+!!        IF (my_thread(l).and.bounded(l)) THEN
+!          print*,'1. step_fl: l=',l,'nfm2=',nfm2, & 
+!     &            'izgrd=',track(izgrd,nfm2,l),  &
+!     &            'nfm1=',nfm1,' izgrd=',track(izgrd,nfm1,l),           &
+!     &            'nf=',nf,' izgrd=',track(izgrd,nf,l),        &
+!     &            'nfp1=',nfp1,' izgrd=',track(izgrd,nfp1,l),  &
+!     &            'dpth(nf)=',track(idpth,nf,l), & 
+!     &               'zslp=',track(izrhs,nf,l),                         &
+!     &               'diffusiv=',track(ifakt,nf,l),                     &
+!     &               'dAkt/ds=',track(ifdak,nf,l),     &
+!     &            ' t=',track(ifTvar(itemp),:,l), &
+!     &            ' s=',track(ifTvar(isalt),:,l)
+!          EXIT
+!        ENDIF
+!      ENDDO  
+! DD END
+!#  endif
 ! DDMITRY
 #  ifdef OIL_DEBUG
+      IF (Master) print*,'Calling vwalk_floats, ifltX=',ifltX
       CALL vwalk_floats (ng, Lstr, Lend, .TRUE., my_thread, nudg, ifltX) 
 #  else
       CALL vwalk_floats (ng, Lstr, Lend, .TRUE., my_thread, nudg) 
 #  endif
 ! END DD
-#  else
-      CALL vwalk_floats (ng, Lstr, Lend, .TRUE., my_thread, nudg)
-#  endif
+!#  else
+!      CALL vwalk_floats (ng, Lstr, Lend, .TRUE., my_thread, nudg)
+!#  endif
 
-#  ifdef OIL_DEBUG
+!#  ifdef OIL_DEBUG
 ! DDMITRY
 !      DO l=Lstr,Lend
 !        IF (my_thread(l).and.(l.eq.ifltX)) THEN
-!          print*,'2. Predict. vwalk return: l=',l,'nfp1=',nfp1,  &
-!     &               'zgrd=',track(izgrd,nf,l),                         &
-!     &               'zgrd+1=',track(izgrd,nfp1,l),                     &
-!     &               'depth=',track(idpth,nf,l),                        &
-!     &               'depth(n+1)=',track(idpth,nfp1,l),                 &
+!          print*,' '
+!          print*,'2. step_fl: l=',l,'nfm2=',nfm2,  & 
+!     &             'izgrd=',track(izgrd,nfm2,l),  &
+!     &            'nfm1=',nfm1,' izgrd=',track(izgrd,nfm1,l),           &
+!     &            'nf=',nf,' izgrd=',track(izgrd,nf,l),        &
+!     &            'nfp1=',nfp1,' izgrd=',track(izgrd,nfp1,l),  &
+!     &            'dpth(nf)=',track(idpth,nf,l),               &
 !     &               'zslp=',track(izrhs,nf,l),                         &
 !     &               'diffusiv=',track(ifakt,nf,l),                     &
 !     &               'dAkt/ds=',track(ifdak,nf,l)
+!          print*,'2. step_fl: t=',track(ifTvar(itemp),:,l), &
+!     &            ' s=',track(ifTvar(isalt),:,l)
+!
 !          EXIT
 !        ENDIF
 !      ENDDO  
 ! DD END
-#  endif
+!#  endif
 # else
       DO l=Lstr,Lend
         nudg(l)=0.0_r8
@@ -371,8 +410,7 @@
 ! DDMITRY
 ! Compute wind-related drift of oil particles at the surface
 ! Only if surface forcing is turned on
-# ifdef FLOAT_OIL
-#  if defined BULK_FLUXES || defined BULK_FLUXES2D || defined ATM2OCN_FLUXES 
+# if defined FLOAT_OIL && defined OIL_WDRIFT
       Istr=BOUNDS(ng)%Istr(MyRank)
       Iend=BOUNDS(ng)%Iend(MyRank)
       Jstr=BOUNDS(ng)%Jstr(MyRank)
@@ -405,19 +443,25 @@
 #   endif
             CALL wdrift_floats(ng, LBi, UBi, LBj, UBj,                  & 
      &                        Istr, Iend, Jstr, Jend, nf, l,            &
+#   ifndef OFFLINE
      &                        FORCES(ng) % Uwind,                       & 
      &                        FORCES(ng) % Vwind,                       &
-#   ifdef OIL_DEBUG 
-     &                        DRIFTER(ng) % track, ldebug)
 #   else
-     &                        DRIFTER(ng) % track)
+     &                        CLIMA(ng) % Uwind,                        &
+     &                        CLIMA(ng) % Vwind,                        &
 #   endif
+#   ifdef OIL_DEBUG 
+!     &                        DRIFTER(ng) % track, ldebug)
+     &                        track, ldebug)
+#   else
+!     &                        DRIFTER(ng) % track)
+     &                        track)
+#   endif 
 
           ENDIF
 
         ENDIF
       ENDDO
-
 !
 !-----------------------------------------------------------------------
 !  Determine floats status. Stop tracking floats outside the domain
@@ -442,11 +486,7 @@
         END IF
       END DO
 !
-
-
-#  endif
-# endif
-
+# endif /* defined FLOAT_OIL && OIL_WDRIFT */
 ! END DD
 !
 !-----------------------------------------------------------------------
@@ -497,7 +537,7 @@
      &                                       track(i1oHz,nfm1,l)+       &
      &                                  cff1*track(iwoil,nfm2,l)*       &
      &                                       track(i1oHz,nfm2,l))
-! DDEND 
+! DD END 
 #  else
             track(izgrd,nfp1,l)=track(izgrd,nfm3,l)+                    &
      &                          dt(ng)*(cff1*track(izrhs,nf  ,l)-       &
@@ -586,7 +626,7 @@
      &                                  cff2*track(izrhs,nfm1,l)+       &
      &                                  cff1*track(izrhs,nfm2,l))
           END IF
-# endif
+# endif /* if defined SOLVE3D && !defined FLOAT_VWALK */
         END IF
       END DO
 !
@@ -619,6 +659,22 @@
      &                    OCEAN(ng) % v(:,:,:,nnew),                    &
      &                    my_thread, bounded, track)
 
+!#  if defined OIL_DEBUG
+!
+! DDMITRY  debug
+!      if (Master) then
+!        DO itm=1,3
+!          print*,'step_floats: itm=', itm,' Ocean max/min U=',       &
+!     &         maxval(OCEAN(ng)%u(:,:,50,itm)),     &
+!     &         minval(OCEAN(ng)%u(:,:,50,itm))
+!          print*,'step_floats: itm=', itm,' Ocean max/min V=',   &
+!     &         maxval(OCEAN(ng)%v(:,:,50,itm)),     &
+!     &         minval(OCEAN(ng)%v(:,:,50,itm))
+!        ENDDO
+!      endif
+! END DD
+!#  endif
+!
 #  if !defined FLOAT_VWALK
 #   ifdef DIAPAUSE
 !  Based on date, determine if NCa are going upwards or downwards
@@ -730,7 +786,7 @@
 #  endif
      &                    OCEAN(ng) % vbar(:,:,knew),                   &
      &                    my_thread, bounded, track)
-# endif
+# endif /* SOLVE3d */
 
 # ifdef FLOAT_BIOLOGY
 !
@@ -769,7 +825,12 @@
 !
 !  Interpolate tracer to the predictor step locations. These values
 !  are used in the "oil_floats" routine.
-!  
+! DDMITRY - OFFLINE reading from correct tracer array: this worked:
+!#  if defined OFFLINE
+!     &                      CLIMA(ng) % tclm(:,:,:,itrc),               &  
+!#   else
+!     &                      OCEAN(ng) % t(:,:,:,nnew,itrc),             &
+!#   endif
       DO itrc=1,NT(ng)
         CALL interp_floats (ng, LBi, UBi, LBj, UBj, 1, N(ng),           &
      &                      Lstr, Lend, nfp1, ifTvar(itrc),             &
@@ -782,6 +843,40 @@
 #  endif
      &                      OCEAN(ng) % t(:,:,:,nnew,itrc),             &
      &                      my_thread, bounded, track)
+!# ifdef OIL_DEBUG
+!      if (Master) then
+!        DO itm=1,3
+!          print*,'step_floats: time=', itm,' Ocean max/min T=',       &
+!     &         maxval(OCEAN(ng)%t(:,:,50,itm,1)),     &
+!     &         minval(OCEAN(ng)%t(:,:,50,itm,1))
+!          print*,'step_floats: Ocean max/min S=',   &
+!     &         maxval(OCEAN(ng)%t(:,:,50,itm,2)),     &
+!     &         minval(OCEAN(ng)%t(:,:,50,itm,2))
+!!          CALL check_tracer(ng,'step_floats:')
+!        ENDDO  
+!      endif
+!
+!              tmax = -10.0
+!              tmin = 1000.0
+!              smax = -100.0
+!              smin = 1000.0
+!              DO lfl=Lstr, Lend
+!                dmm = maxval(track(ifTvar(itemp),:,lfl))
+!                tmax = maxval((/tmax, dmm/))
+!                dmm = minval(track(ifTvar(itemp),:,lfl))
+!                tmin = minval((/tmin, dmm/))
+!
+!                dmm = maxval(track(ifTvar(isalt),:,lfl))
+!                smax = maxval((/smax, dmm/))
+!                dmm = minval(track(ifTvar(isalt),:,lfl))
+!                smin = minval((/smin, dmm/))
+!              ENDDO
+!              print*,'step_fl: max/min track(itemp) =',  &
+!     &                tmax, tmin
+!              print*,'step_fl: max/min track(isalt) =',  &
+!     &                smax, smin
+!
+!#  endif /* OIL_DEBUG*/
       END DO
 !
 !
@@ -792,20 +887,23 @@
 # endif
 !
 #  ifdef OIL_DEBUG
-      DO l=Lstr,Lend
-        IF (my_thread(l) .and. l.eq.ifltX) THEN
-          print*,'<====: Output oil_floats PREDICTOR l=',l,             & 
-     &               'xgrd=',track(ixgrd,nfp1,l),                       &
-     &               'ygrd=',track(iygrd,nfp1,l),                       &
-     &               'zgrd=',track(izgrd,nfp1,l),                       &
-     &               'depth=',track(idpth,nfp1,l)
-          EXIT
-        ENDIF
-      ENDDO  
+!      DO l=Lstr,Lend
+!        IF (my_thread(l) .and. l.eq.ifltX) THEN
+!          print*,'<====: nfp1: oil_floats PREDICTOR l=',l,             & 
+!     &               'xgrd=',track(ixgrd,nfp1,l),                       &
+!     &               'ygrd=',track(iygrd,nfp1,l),                       &
+!     &               'zgrd=',track(izgrd,nfp1,l),                       &
+!     &               'depth=',track(idpth,nfp1,l),                      &
+!     &               'woil=',track(iwoil,nfp1,l)
+!            print*,' nfp1: T=',track(ifTvar(itemp),nfp1,l),      &
+!     &             ' S=',track(ifTvar(isalt),nfp1,l)
+!          EXIT
+!        ENDIF
+!      ENDDO  
 #  endif
 !
 !
-# endif
+# endif  /* FLOAT_OIL */
 ! DD END  
 
 !
@@ -1084,6 +1182,14 @@
 !          mxT=max(mxT,Tinfo(itstr,l))
           ifltNB=ifltNB+1
         ENDIF
+!        IF (my_thread(l).and.bounded(l).and.l.eq.ifltX) THEN
+!          print*,'3. l=',l,'nfm2=',nfm2, 'izgrd=',track(izgrd,nfm2,l),  &
+!     &            'nfm1=',nfm1,' izgrd=',track(izgrd,nfm1,l),           &
+!     &            'nf=',nf,' izgrd=',track(izgrd,nf,l),        &
+!     &            'nfp1=',nfp1,' izgrd=',track(izgrd,nfp1,l),  &
+!     &            'dpth(nf)=',track(idpth,nf,l)
+!          print*,'   '
+!        ENDIF
       ENDDO
 ! DD END
 # endif
@@ -1378,7 +1484,8 @@
 #  endif
      &                    OCEAN(ng) % rho,                              &
      &                    my_thread, bounded, track)
-
+!
+!  DDMITRY - correct tracer array for offline
       DO itrc=1,NT(ng)
         CALL interp_floats (ng, LBi, UBi, LBj, UBj, 1, N(ng),           &
      &                      Lstr, Lend, nfp1, ifTvar(itrc),             &
@@ -1389,10 +1496,15 @@
 #  ifdef MASKING
      &                      GRID(ng) % rmask,                           &
 #  endif
+#   if defined OFFLINE
+     &                      CLIMA(ng) % tclm(:,:,:,itrc),               &  
+#   else
      &                      OCEAN(ng) % t(:,:,:,nnew,itrc),             &
+#   endif
      &                      my_thread, bounded, track)
       END DO
-# endif
+# endif /* SOLVE3D */
+! 
 # ifdef FLOAT_BIOLOGY
 !
 !-----------------------------------------------------------------------
@@ -1407,47 +1519,32 @@
 !-----------------------------------------------------------------------
 !  Compute oil float behavior, corrector step.
 !-----------------------------------------------------------------------
-!#   ifdef OIL_DEBUG
-!      DO l=Lstr,Lend
-!        IF (my_thread(l) .and. l.eq.ifltB) THEN
-!        IF (my_thread(l) .and. l.eq.ifltX) THEN
-!          print*,'===>: Calling oil_floats correct l=',l,'nfp1=',nfp1
-!          DO j=0,NFT               
-!            print*,' Time level=',j,                                    &
-!     &               'xgrd=',track(ixgrd,j,l),                       &
-!     &               'ygrd=',track(iygrd,j,l),                       &
-!     &               'zgrd=',track(izgrd,j,l),                       &
-!     &               'depth=',track(idpth,j,l)
-!            print*,' lon=',track(iflon,j,l),' lat=',track(iflat,j,l)
-!          ENDDO
-!          EXIT
-!        ENDIF
-!      ENDDO  
-!#    endif
-
 #   ifdef OIL_DEBUG
       CALL oil_floats (ng, Lstr, Lend, .FALSE., my_thread, ifltX)  
 #   else
       CALL oil_floats (ng, Lstr, Lend, .FALSE., my_thread)  
 #   endif
 
-!#  ifdef OIL_DEBUG
-!      DO l=Lstr,Lend
-!        IF (my_thread(l) .and. l.eq.ifltB) THEN
-!          print*,'<<===: Output oil_floats correct l=',l
+#  ifdef OIL_DEBUG
+      DO l=Lstr,Lend
+        IF (my_thread(l) .and. l.eq.ifltB) THEN
+          print*,'<<===: Output oil_floats correct l=',l
 !!          DO j=0,NFT 
-!          j=nfp1              
-!            print*,' Time level=',j,                                    &
-!     &               'xgrd=',track(ixgrd,j,l),                       &
-!     &               'ygrd=',track(iygrd,j,l),                       &
-!     &               'zgrd=',track(izgrd,j,l),                       &
-!     &               'depth=',track(idpth,j,l)
-!            print*,' lon=',track(iflon,j,l),' lat=',track(iflat,j,l)
-!!          ENDDO
-!          EXIT
-!        ENDIF
-!      ENDDO  
-!#  endif
+          j=nfp1              
+            print*,' nfp1 Time level=',j,                                    &
+    &               'xgrd=',track(ixgrd,nfp1,l),                       &
+     &               'ygrd=',track(iygrd,nfp1,l),                       &
+     &               'zgrd=',track(izgrd,nfp1,l),                       &
+     &               'depth=',track(idpth,nfp1,l),                      &
+     &               'woil=',track(iwoil,nfp1,l)
+            print*,' nfp1: T=',track(ifTvar(itemp),nfp1,l),      &
+     &             ' S=',track(ifTvar(isalt),nfp1,l)
+            print*,' lon=',track(iflon,j,l),' lat=',track(iflat,j,l)
+!          ENDDO
+          EXIT
+        ENDIF
+      ENDDO  
+#  endif
 !
 # endif
 ! DD END
@@ -1465,7 +1562,24 @@
       CALL vwalk_floats (ng, Lstr, Lend, .FALSE., my_thread, nudg)
 #  endif
 
+!#  ifdef OIL_DEBUG
+! DDMITRY
+!      DO l=Lstr,Lend
+!        IF (my_thread(l).and.(l.eq.ifltX)) THEN
+!          print*,'4. l=',l,'nfm2=',nfm2, 'izgrd=',track(izgrd,nfm2,l),  &
+!     &            'nfm1=',nfm1,' izgrd=',track(izgrd,nfm1,l),           &
+!     &            'nf=',nf,' izgrd=',track(izgrd,nf,l),        &
+!     &            'nfp1=',nfp1,' izgrd=',track(izgrd,nfp1,l),  &
+!     &            'dpth(nf)=',track(idpth,nf,l)
+!
+!          EXIT
+!        ENDIF
+!      ENDDO
+! DD END
+!#  endif
+
 # endif
+
 # ifdef SOLVE3D
 #  ifdef FLOAT_STICKY
 !
@@ -1563,7 +1677,7 @@
       ENDIF
 ! END DD
 #  endif
-# endif
+# endif  /* DISTRIBUTE */
       RETURN
       END SUBROUTINE step_floats_tile
 #endif

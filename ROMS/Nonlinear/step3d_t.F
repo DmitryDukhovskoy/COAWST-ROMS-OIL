@@ -193,6 +193,16 @@
 # if defined OFFLINE_BIOLOGY
       USE mod_biology
 # endif
+! DDMITRY
+# if defined OIL_BIO
+      USE mod_biology
+# endif
+# ifdef OIL_SEDIMENT
+      USE mod_sediment
+# endif
+! DDMITRY debug
+      USE mod_parallel  ! debug
+! END DD
 !
 !  Imported variable declarations.
 !
@@ -324,6 +334,10 @@
 # endif
       integer :: Isrc, Jsrc
       integer :: i, ibt, ic, is, itrc, j, k, ltrc
+! DDMITRY
+# ifdef OIL_SEDIMENT
+      integer :: ist
+# endif
 # if defined AGE_MEAN && defined T_PASSIVE
       integer :: iage
 # endif
@@ -363,6 +377,12 @@
       real(r8), dimension(0:N(ng)) :: kaz, kaz_inverse, grad_k
 # endif
       real(r8) :: my_maxbio(15)
+# ifdef OIL_DEBUG
+! DDMITRY debug
+      integer :: ii, jj, kk, inn
+      real(r8) :: dmm, trmin, trmax
+! END DD
+# endif
 !
 # include "set_bounds.h"
 
@@ -376,6 +396,20 @@
       JLB=BOUNDS(ng)%LBj(-1)
       JUB=BOUNDS(ng)%UBj(-1)
 # endif
+!# ifdef OIL_DEBUG
+! DDMITRY debug - prints all tracers at a given location
+!       IF (Master) then
+!         ii = LBi+10
+!         jj = LBj+10
+!         kk = 30
+!         print*,'NT=',NT,' NAT=',NAT,' NPT=',NPT,' NST=',NST,' NBT=',NBT
+!         DO inn=1,NT(ng)
+!           print*,'1: step3d_t: inn=',inn,'Trc=', t(ii,jj,kk,:,inn),  &
+!     &          'LtracerCLM=',LtracerCLM(inn,ng)
+!         ENDDO
+!       ENDIF
+! END DD
+!#endif
 !
 !-----------------------------------------------------------------------
 !  Time-step horizontal advection term.
@@ -411,6 +445,20 @@
           itrc=idbio(ibt)
 # elif defined OFFLINE_TPASSIVE
         DO itrc=NAT+1,NAT+NPT
+! DDMITRY add oil sed/bio tracers exclude tracers
+! that are being read from CLIMATOLOGY file during offline run
+# elif defined OFFLINE && defined OIL_BIO && defined OIL_SEDIMENT 
+        DO itrc=NAT+1,NAT+NST+NBT
+          IF (LtracerCLM(itrc,ng)) CYCLE
+# elif defined OFFLINE && defined OIL_BIO && !defined OIL_SEDIMENT
+        DO ibt=1,NBT
+          itrc=idbio(ibt)
+          IF (LtracerCLM(itrc,ng)) CYCLE
+# elif defined OFFLINE && defined OIL_SEDIMENT && !defined OIL_BIO
+        DO ist=1,NST
+          itrc=idsed(ist)
+          IF (LtracerCLM(itrc,ng)) CYCLE
+! END DD
 # else
         DO itrc=1,NT(ng)
 # endif
@@ -428,19 +476,38 @@
      &                    t(:,:,:,nnew,:))
 #  endif
 # endif
-# ifdef OFFLINE_BIOLOGY
-      T_LOOP : DO ibt=1,NBT
-        itrc=idbio(ibt)
-# elif defined OFFLINE_TPASSIVE
-      T_LOOP : DO itrc=NAT+1,NAT+NPT
-# else
 !
 !  Compute horizontal tracer advection fluxes.
 !
+# ifdef OFFLINE_BIOLOGY
+      T_LOOP : DO ibt=1,NBT
+        itrc=idbio(ibt)
+# elif defined OFFLINE_TPASSIVE  
+      T_LOOP : DO itrc=NAT+1,NAT+NPT
+! DDMITRY add oil sed/bio tracers for OFFLINE
+# elif defined OFFLINE && defined OIL_BIO && defined OIL_SEDIMENT 
+      T_LOOP : DO itrc=NAT+1,NAT+NST+NBT
+        IF (LtracerCLM(itrc,ng)) CYCLE
+# elif defined OFFLINE && defined OIL_BIO && !defined OIL_SEDIMENT
+      T_LOOP : DO ibt=1,NBT
+        itrc=idbio(ibt)
+        IF (LtracerCLM(itrc,ng)) CYCLE
+# elif defined OFFLINE && defined OIL_SEDIMENT && !defined OIL_BIO
+      T_LOOP : DO ist=1,NST
+        itrc=idsed(ist)
+        IF (LtracerCLM(itrc,ng)) CYCLE
+! END DD
+# else
       T_LOOP : DO itrc=1,NT(ng)
 # endif
+!# ifdef OIL_DEBUG
+! DDMITRY debug
+!          IF (Master) THEN
+!            print*,'step3d_t: Horiz tr adv itrc=',itrc
+!          ENDIF
+! END DD
+!# endif
         K_LOOP : DO k=1,N(ng)
-
 # if defined TS_C2HADVECTION
 !
 !  Second-order, centered differences horizontal advective fluxes.
@@ -790,8 +857,21 @@
 #ifdef OFFLINE_BIOLOGY
         DO ibt=1,NBT
           itrc=idbio(ibt)
-#elif defined OFFLINE_TPASSIVE
+# elif defined OFFLINE_TPASSIVE 
         DO itrc=NAT+1,NAT+NPT
+! DDMITRY add oil sed/bio tracers
+# elif defined OFFLINE && defined OIL_BIO && defined OIL_SEDIMENT 
+        DO itrc=NAT+1,NAT+NST+NBT
+          IF (LtracerCLM(itrc,ng)) CYCLE
+# elif defined OFFLINE && defined OIL_BIO && !defined OIL_SEDIMENT
+        DO ibt=1,NBT
+          itrc=idbio(ibt)
+          IF (LtracerCLM(itrc,ng)) CYCLE
+# elif defined OFFLINE && defined OIL_SEDIMENT && !defined OIL_BIO
+        DO ist=1,NST
+          itrc=idsed(ist)
+          IF (LtracerCLM(itrc,ng)) CYCLE
+! END DD
 #else
         DO itrc=1,NT(ng)
 #endif
@@ -1278,8 +1358,21 @@
 #ifdef OFFLINE_BIOLOGY
       DO ibt=1,NBT
         itrc=idbio(ibt)
-#elif defined OFFLINE_TPASSIVE
+# elif defined OFFLINE_TPASSIVE 
       DO itrc=NAT+1,NAT+NPT
+! DDMITRY add oil sed/bio tracers
+# elif defined OFFLINE && defined OIL_BIO && defined OIL_SEDIMENT 
+        DO itrc=NAT+1,NAT+NST+NBT
+          IF (LtracerCLM(itrc,ng)) CYCLE
+# elif defined OFFLINE && defined OIL_BIO && !defined OIL_SEDIMENT
+        DO ibt=1,NBT
+          itrc=idbio(ibt)
+          IF (LtracerCLM(itrc,ng)) CYCLE
+# elif defined OFFLINE && defined OIL_SEDIMENT && !defined OIL_BIO
+        DO ist=1,NST
+          itrc=idsed(ist)
+          IF (LtracerCLM(itrc,ng)) CYCLE
+! END DD
 #else
       DO itrc=1,NT(ng)
 #endif
@@ -1325,6 +1418,11 @@
 !
 !  Time-step corrected horizontal advection (Tunits m).
 !
+# ifdef OIL_DEBUG
+! DDMITRY debug
+         trmax = -1.e30
+         trmin = 1.e30
+# endif
           DO j=Jstr,Jend
             DO i=Istr,Iend
               cff=dt(ng)*pm(i,j)*pn(i,j)
@@ -1332,6 +1430,13 @@
               cff2=cff*(FE(i,j+1)-FE(i,j))
               cff3=cff1+cff2
               t(i,j,k,nnew,itrc)=Ta(i,j,k,itrc)*Hz(i,j,k)-cff3
+# ifdef OIL_DEBUG
+! DDMITRY debug
+              dmm=maxval((/trmax,t(i,j,k,nnew,itrc)/))
+              trmax=dmm
+              dmm=minval((/trmin,t(i,j,k,nnew,itrc)/))
+              trmin=dmm
+# endif
 #  ifdef DIAGNOSTICS_TS
               DiaTwrk(i,j,k,itrc,iTxadv)=DiaTwrk(i,j,k,itrc,iTxadv)-    &
      &                                   cff1
@@ -1397,8 +1502,21 @@
 #ifdef OFFLINE_BIOLOGY
         DO ibt=1,NBT
           itrc=idbio(ibt)
-#elif defined OFFLINE_TPASSIVE
+# elif defined OFFLINE_TPASSIVE 
         DO itrc=NAT+1,NAT+NPT
+! DDMITRY add oil sed/bio tracers
+# elif defined OFFLINE && defined OIL_BIO && defined OIL_SEDIMENT 
+        DO itrc=NAT+1,NAT+NST+NBT
+          IF (LtracerCLM(itrc,ng)) CYCLE
+# elif defined OFFLINE && defined OIL_BIO && !defined OIL_SEDIMENT
+        DO ibt=1,NBT
+          itrc=idbio(ibt)
+          IF (LtracerCLM(itrc,ng)) CYCLE
+# elif defined OFFLINE && defined OIL_SEDIMENT && !defined OIL_BIO
+        DO ist=1,NST
+          itrc=idsed(ist)
+          IF (LtracerCLM(itrc,ng)) CYCLE
+! END DD
 #elif defined TS_VAR
         DO itrc=1,NAT
 #else
@@ -1607,8 +1725,21 @@
 #ifdef OFFLINE_BIOLOGY
       DO ibt=1,NBT
         itrc=idbio(ibt)
-#elif defined OFFLINE_TPASSIVE
+# elif defined OFFLINE_TPASSIVE 
       DO itrc=NAT+1,NAT+NPT
+! DDMITRY add oil sed/bio tracers
+# elif defined OFFLINE && defined OIL_BIO && defined OIL_SEDIMENT 
+        DO itrc=NAT+1,NAT+NST+NBT
+          IF (LtracerCLM(itrc,ng)) CYCLE
+# elif defined OFFLINE && defined OIL_BIO && !defined OIL_SEDIMENT
+        DO ibt=1,NBT
+          itrc=idbio(ibt)
+          IF (LtracerCLM(itrc,ng)) CYCLE
+# elif defined OFFLINE && defined OIL_SEDIMENT && !defined OIL_BIO
+        DO ist=1,NST
+          itrc=idsed(ist)
+          IF (LtracerCLM(itrc,ng)) CYCLE
+! END DD
 #else
 !  Initialize tracer counter index. The "tclm" array is only allocated
 !  to the NTCLM fields that need to be processed. This is done to
@@ -1648,8 +1779,8 @@
             END DO
           END DO
         END IF
-IF (itrc.eq.3) THEN
-END IF
+
+
 # ifdef MASKING
 !
 !  Apply Land/Sea mask.

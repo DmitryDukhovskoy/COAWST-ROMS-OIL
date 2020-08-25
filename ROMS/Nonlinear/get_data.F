@@ -39,6 +39,7 @@
       USE mod_stepping
 !
       USE strings_mod, ONLY : FoundError
+      USE mod_parallel   ! DDMITRY
 !
       implicit none
 !
@@ -54,6 +55,9 @@
       integer :: ILB, IUB, JLB, JUB
       integer :: LBi, UBi, LBj, UBj
       integer :: i, ic, my_tile
+! DDMITRY debug
+      integer :: ii, jj, kk, inn
+! END DD
 !
 !  Lower and upper bounds for nontiled (global values) boundary arrays.
 !
@@ -1848,9 +1852,57 @@
      &                   __FILE__)) RETURN
         END IF
       END DO
+! DDMITRY debug
+!       IF (Master) THEN
+!         ii = LBi+10
+!         jj = LBj+10
+!         kk = 30
+!         ic = 0
+!         DO inn=1,NT(ng)
+!           IF (LtracerCLM(inn,ng)) THEN
+!           ic=ic+1
+!        print*,'+++ get_data:: inn=',inn,' LtrCLM=',LtracerCLM(inn,ng), & 
+!      &      'Trc=',CLIMA(ng)%tclmG(ii,jj,kk,:,ic)
+!           ENDIF
+!         ENDDO
+!       ENDIF
+! END DD
 # endif
 
 ! Added by DJ ------------------------------------
+! DDMITRY  FORCES changed to CLIMA for offline, CPP flags
+! 
+#if defined OFFLINE && defined FLOAT_OIL && defined OIL_WDRIFT
+!-----------------------------------------------------------------------
+!  Surface wind components (necessary to include weathering effects on
+!  oil transport)
+!-----------------------------------------------------------------------
+!
+! DDMITRY
+      IF (Master) then
+        print*,'Reading Uwind & Vwind clim'
+      ENDIF
+! END DD
+      CALL get_2dfld (ng, iNLM, idUair, ncCLMid(idUair,ng),             &
+     &                nCLMfiles(ng), CLM(1,ng), update(1),              &
+     &                LBi, UBi, LBj, UBj, 2, 1,                         &
+# ifdef MASKING
+     &                GRID(ng) % rmask,                                 &
+# endif
+     &                CLIMA(ng) % UwindG)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &               __FILE__)) RETURN
+    
+      CALL get_2dfld (ng , iNLM, idVair, ncCLMid(idVair,ng),            &
+     &                nCLMfiles(ng), FRC(1,ng), update(1),              &
+     &                LBi, UBi, LBj, UBj, 2, 1,                         &
+# ifdef MASKING
+     &                GRID(ng) % rmask,                                 &
+# endif
+     &                CLIMA(ng) % VwindG)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &               __FILE__)) RETURN
+#endif
 
 !# if !defined ANA_AKTCLIMA && defined AKTCLIMATOLOGY
 !      write(*,*) 'reading AKt in climatology file'
@@ -1867,7 +1919,7 @@
 
 # if !defined ANA_AKTCLIMA || !defined ANA_VMIX
 # if defined AKTCLIMATOLOGY || defined AKXCLIMATOLOGY
-!      write(*,*) 'reading AKt in climatology file id', idAKtclm
+!      write(*,*) 'get_data:reading AKt in climatology file id',idAKtclm
       CALL get_3dfld (ng, iNLM, idAKtclm, ncCLMid(idAKtclm,ng),         &
      &                nCLMfiles(ng), CLM(1,ng), update(1),              &
      &                LBi, UBi, LBj, UBj, 0, N(ng), 2, 1,               &
@@ -1891,7 +1943,7 @@
      &                   __FILE__)) RETURN
 # endif
 # if defined AKVCLIMATOLOGY || defined AKXCLIMATOLOGY
-      !write(*,*) 'reading AKv in climatology file'
+!      write(*,*) 'reading AKv in climatology file',idAKvclm
       CALL get_3dfld (ng, iNLM, idAKvclm, ncCLMid(idAKvclm,ng),         &
      &                nCLMfiles(ng), CLM(1,ng), update(1),              &
      &                LBi, UBi, LBj, UBj, 0, N(ng), 2, 1,               &

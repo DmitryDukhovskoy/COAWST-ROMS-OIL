@@ -337,10 +337,11 @@
           real(r8), pointer :: Wave_qpG(:,:,:)
 # endif
 #endif
-
+! DDMITRY - added WDRIFT
 #if defined BULK_FLUXES || defined BULK_FLUXES2D || defined ECOSIM || \
     defined CCSM_FLUXES2D || defined ATM2OCN_FLUXES || \
-    defined SPECTRAL_LIGHT
+    defined SPECTRAL_LIGHT || \
+    defined OIL_WDRIFT                      
           real(r8), pointer :: Uwind(:,:)
           real(r8), pointer :: Vwind(:,:)
 # ifndef ANA_WINDS

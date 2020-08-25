@@ -261,7 +261,6 @@
      &                    EWperiodic(ng), NSperiodic(ng),               &
      &                    wvel)
 # endif
-
       RETURN
       END SUBROUTINE wvelocity_tile
 #endif

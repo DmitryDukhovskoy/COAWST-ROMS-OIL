@@ -88,6 +88,13 @@
 #endif
       USE strings_mod,        ONLY : find_string
       USE strings_mod,        ONLY : FoundError
+# if defined OIL_DEBUG
+! DDMITRY
+!      USE mod_param
+      USE check_tracer_mod
+! END DD
+# endif
+
 !
       implicit none
 !
@@ -121,7 +128,10 @@
       real(r8) :: Fmax, Fmin, INPtime, Tmax, scale, time_scale
 
       real(r8), allocatable :: TimeVar(:)
-
+! 
+! DDMITRY debug
+      integer :: ii, jj, kk
+! END DD 
       character (len=6 ) :: string
       character (len=15) :: Tstring, attnam, tvarnam
       character (len=22) :: t_code
@@ -1085,9 +1095,8 @@
      &                          TRIM(Vname(1,idTvar(itrc))), varid)
 ! DDMITRY
             IF (Master .and. foundit) THEN
-              print*,'Reading ini ',itrc,' ',TRIM(Vname(1,idTvar(itrc)))
-!              print*,'idTvar=',idTvar(itrc)
-!              print*,'Perfect3D=',Perfect3D,' Tindex=',Tindex
+              print*,'get_state: Tracer Reading ini ',itrc,' ',  &
+     &                TRIM(Vname(1,idTvar(itrc)))
             ENDIF
 !  END DD
             IF (foundit) THEN
@@ -1112,12 +1121,26 @@
      &                            GRID(ng) % rmask,                     &
 #  endif
      &                            OCEAN(ng) % t(:,:,:,Tindex,itrc))
-! DDMITRY
-              IF (Master .and. itrc.eq.18) THEN
-                print*,'Read in iSbug=',OCEAN(ng) % t(141,78,4,Tindex,itrc)
-              ENDIF
+#  ifdef OIL_DEBUG
+! DDMITRY debug
+!              IF (Master) THEN
+!                  ii=LBi+10
+!                  jj=LBj+10
+!                  kk=30
+!                print*,'get_state:Tindx=',Tindex,' OCEAN TR(',itrc,')=',&
+!     &                  OCEAN(ng) % t(ii,jj,kk,Tindex,itrc)
+!                ENDIF
 ! END DD
+#  endif
               END IF
+#  ifdef OIL_DEBUG
+! DDMITRY debug
+!              IF (Master) THEN
+!              print*,'get_state: Perfect3d=',Perfect3D,'Tindex=',Tindex
+!                CALL check_tracer(ng,'get_state')
+!              ENDIF
+! END DD
+#  endif
               IF (FoundError(status, nf90_noerr, __LINE__,              &
      &                       __FILE__)) THEN
                 IF (Master) THEN

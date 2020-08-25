@@ -233,19 +233,20 @@
 
 !# ifdef OIL_MAP_DEBUG      
 !      IF (MyRank.eq.MyMaster) THEN
-!      IF (lchck .and. maxval(NFLT3D)>0) THEN
-!        print*,'My Rank =', MyRank, 'maxNFLT=',maxval(NFLT3D)
+!        IF (lchck .and. maxval(NFLT3D)>0) THEN
+!          print*, 'maxNFLT=',maxval(NFLT3D)
+!        ENDIF
 !      ENDIF
 !# endif
 !
 
-!      mxNflt=0
+      mxNflt=0
       sumFlt=0
       DO k=1,N(ng)
         DO j=Jstr,Jend
           DO i=Istr,Iend
             nfgrd=NFLT3D(i,j,k)
-!            mxNflt=max(mxNflt,nfgrd)
+            mxNflt=max(mxNflt,nfgrd)
             sumFlt=sumFlt+nfgrd
             IF (nfgrd.eq.0) THEN
               IF (Doil(i,j,k).ge.1.0e-20_r8) THEN
