@@ -327,17 +327,6 @@
       ifltx=0
       DO l=Lstr,Lend
         IF (my_thread(l).and.bounded(l)) THEN
-!          print*,'Step Floats: 1. Predict.calling vwalk: l=',l,         & 
-!     &               ' Time=',time(ng),', release t=',Tinfo(itstr,l),   &
-!     &               'xgrd=',track(ixgrd,nf,l),                         &
-!     &               'ygrd=',track(iygrd,nf,l),                         &
-!     &               'zgrd=',track(izgrd,nf,l),                         &
-!     &               'zgrd+1=',track(izgrd,nfp1,l),                     &
-!     &               'depth=',track(idpth,nf,l),                        &
-!     &               'depth(n+1)=',track(idpth,nfp1,l),                 &
-!     &               'zslp=',track(izrhs,nf,l),                         &
-!     &               'diffusiv=',track(ifakt,nf,l),                     &
-!     &               'dAkt/ds=',track(ifdak,nf,l)
           ifltX=l
           EXIT
         ENDIF
@@ -496,7 +485,7 @@
      &                                  cff1*track(iwbio,nfm2,l)*       &
      &                                       track(i1oHz,nfm2,l))
 ! 
-! DMITRY - ADD OIL float
+! DMITRY 
 # elif defined FLOAT_OIL
             track(izgrd,nfp1,l)=track(izgrd,nfm3,l)+                    &
      &                          dt(ng)*(cff1*track(izrhs,nf  ,l)-       &
@@ -795,21 +784,6 @@
      &                      my_thread, bounded, track)
       END DO
 !
-#   ifdef OIL_DEBUG
-!
-!  Oil behavior predictor step.
-!
-!      DO l=Lstr,Lend
-!        IF (my_thread(l) .and. l.eq.ifltX) THEN
-!          print*,'===>: Calling oil_floats PREDICTOR l=',l,             & 
-!     &               'xgrd=',track(ixgrd,nfp1,l),                       &
-!     &               'ygrd=',track(iygrd,nfp1,l),                       &
-!     &               'zgrd=',track(izgrd,nfp1,l),                       &
-!     &               'depth=',track(idpth,nfp1,l)
-!          EXIT
-!        ENDIF
-!      ENDDO  
-#    endif
 !
 # if defined OIL_DEBUG
       CALL oil_floats (ng, Lstr, Lend, .TRUE., my_thread,ifltX)  
@@ -874,6 +848,20 @@
      &                                       track(i1oHz,nf  ,l)-       &
      &                                  cff3*track(iwbio,nfm1,l)*       &
      &                                       track(i1oHz,nf  ,l))
+! DDMITRY
+#  elif defined FLOAT_OIL
+            track(izgrd,nfp1,l)=cff1*track(izgrd,nf  ,l)-               &
+     &                          cff2*track(izgrd,nfm2,l)+               &
+     &                          dt(ng)*(cff3*track(izrhs,nfp1,l)+       &
+     &                                  cff4*track(izrhs,nf  ,l)-       &
+     &                                  cff3*track(izrhs,nfm1,l)+       &
+     &                                  cff3*track(iwoil,nfp1,l)*       &
+     &                                       track(i1oHz,nfp1,l)+       &
+     &                                  cff4*track(iwoil,nf  ,l)*       &
+     &                                       track(i1oHz,nf  ,l)-       &
+     &                                  cff3*track(iwoil,nfm1,l)*       &
+     &                                       track(i1oHz,nf  ,l))
+! END DD
 #  else
             track(izgrd,nfp1,l)=cff1*track(izgrd,nf  ,l)-               &
      &                          cff2*track(izgrd,nfm2,l)+               &

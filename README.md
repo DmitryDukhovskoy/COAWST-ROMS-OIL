@@ -1,3 +1,9 @@
+Coupled ROMS-OIL-SEDOPA-BIOCHEMICAL model 
+Can be integrated in online (regular) or offline modes
+For offline mode, a climatology file from an online integration should be prepared
+where all needed fields have to be saved: u,v,, ... and input fileds (tracers) 
+for bio (NO3, NH4)  or sediment
+
 # ROMS-OIL
 Oil plume model coupled with ROMS
 
@@ -73,6 +79,6 @@ To turn off the oil model and ROMS as a stand-alone model:
 
 Do not turn OIL_DEBUG on, this will produce large log file. OIL_EULR can be turned off if mapping is not needed. 
 
-Note the code is still under development. The uploaded version is working but not final. Report any bugs to ddukhovskoy@fsu.edu. 
+Report any bugs to ddukhovskoy@fsu.edu. 
 
 

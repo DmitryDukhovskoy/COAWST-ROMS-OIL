@@ -235,7 +235,16 @@
         DO k=1,N(ng)
           DO j=JstrT,JendT
             DO i=IstrT,IendT
-              t(i,j,k,1,idsed(ised))=Csed(ised,ng)
+
+!lcui start
+! Initialize mud_01 with 0.01 kg/m3 for the near bottom layer (k=1)
+!              t(i,j,k,1,idsed(ised))=Csed(ised,ng)
+              t(i,j,k,1,idsed(ised))= 0.0_r8
+
+              if ( ised .eq. 1 .and. k .eq. 1) then
+                 t(i,j,k,1,idsed(ised))=0.01_r8
+              end if
+!lcui end
             END DO
           END DO
         END DO
@@ -322,12 +331,16 @@
           DO k=1,Nbed
              bed(i,j,k,iaged)=time(ng)
              bed(i,j,k,ithck)=0.01_r8
-             bed(i,j,k,iporo)=0.30_r8
+             bed(i,j,k,iporo)=0.80_r8
 !!           DO ised=1,NST
 !!             bed_frac(i,j,k,ised)=1.0_r8/REAL(NST,r8)
 !!           END DO
-             bed_frac(i,j,k,1)=1.0_r8
-             bed_frac(i,j,k,2)=0.0_r8
+!! SEDOPA
+!! mud_01 seabed, mud_02 mud_03 Miss, mud_04,05,06,07 OPA
+           DO ised=1,NST
+             bed_frac(i,j,k,ised)=0.0_r8
+           END DO
+           bed_frac(i,j,k,1)=1.0_r8
           END DO
 !
 !  Set exposed sediment layer properties.

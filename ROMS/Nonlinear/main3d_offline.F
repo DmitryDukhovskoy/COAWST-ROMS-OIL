@@ -100,12 +100,12 @@
       USE ice_frazil_mod, ONLY : ice_frazil
 # endif
       USE set_depth_mod,        ONLY : set_depth
-      USE set_massflux_mod, ONLY : set_massflux
+      USE set_massflux_mod, ONLY : set_massflux, set_massflux_avg
 # if defined SSH_TIDES || defined UV_TIDES || defined POT_TIDES
       USE set_tides_mod, ONLY : set_tides
 # endif
       USE set_vbc_mod, ONLY : set_vbc
-      USE set_zeta_mod, ONLY : set_zeta
+      USE set_zeta_mod, ONLY : set_zeta, set_avg_zeta
       USE step2d_mod, ONLY : step2d
 # ifndef TS_FIXED
       USE step3d_t_mod, ONLY : step3d_t
@@ -114,8 +114,21 @@
 # ifdef FLOATS
       USE step_floats_mod, ONLY : step_floats
 # endif
+# if defined FLOAT_OIL && defined OIL_EULR
+! DDMITRY
+      USE lagr2euler_mod
+      USE metrics_oil_mod
+      USE euler2lagr_mod  !
+#   ifdef OIL_BIO
+      USE bio_oil_mod
+#   endif
+! END DD
+# endif
       USE wvelocity_mod, ONLY : wvelocity
       USE dateclock_mod, ONLY : time_string
+
+! KMT testing
+     !USE mod_ocean 
 
 !
       implicit none
@@ -130,8 +143,13 @@
       integer :: my_iif, next_indx1
 # if defined FLOATS
       integer :: Lend, Lstr, chunk_size
+! DDMITRY
+      real(r8) :: Tstart, Tfinish
+! ENDD
 # endif
       real(r8) :: my_StepTime
+      logical :: FIRSTCALL
+
 !
 !=======================================================================
 !  Time-step nonlinear 3D primitive equations by the specified time.
@@ -186,12 +204,22 @@
 !
         DO ng=1,Ngrids
           IF (iic(ng).eq.ntstart(ng)) THEN
+
+            ! Set this here so that only occurs the first time
+            ! set_avg_zeta is called, the first time step
+            FIRSTCALL = .TRUE.
+
+
 !
 !  Initialize free-surface and compute initial level thicknesses and
 !  depths.
 !
             DO tile=first_tile(ng),last_tile(ng),+1
-              CALL ini_zeta (ng, tile, iNLM)
+              ! commented by KMT since I am inputting zeta. Revisit this
+              ! if want to be able to calculate zeta instead of
+              ! inputting.
+              !CALL ini_zeta (ng, tile, iNLM)
+              CALL set_avg_zeta(ng, tile, FIRSTCALL)  ! to initialize Zt_avg1
               CALL set_depth (ng, tile, iNLM)
             END DO
 !$OMP BARRIER
@@ -204,7 +232,6 @@
 !$OMP BARRIER
           END IF
         END DO
-!
 !-----------------------------------------------------------------------
 !  Compute horizontal mass fluxes (Hz*u/n and Hz*v/m), density related
 !  quatities and report global diagnostics.
@@ -229,40 +256,40 @@
 !-----------------------------------------------------------------------
 !  Set fields for vertical boundary conditions. Process tidal forcing,
 !  if any.
-# if defined ADJUST_STFLUX || defined ADJUST_WSTRESS
+#  if defined ADJUST_STFLUX || defined ADJUST_WSTRESS
 !  Interpolate surface forcing increments and adjust surface forcing.
 !  Load surface forcing into storage arrays.
-# endif
+#  endif
 !-----------------------------------------------------------------------
 !
         DO ng=1,Ngrids
           DO tile=first_tile(ng),last_tile(ng),+1
-# if defined NCEP_FLUXES || defined ALBEDO_CLOUD
+#  if defined NCEP_FLUXES || defined ALBEDO_CLOUD
             CALL cawdir_eval(ng, tile)
-# endif
-# ifdef BULK_FLUXES
-#  ifdef CCSM_FLUXES
-            CALL ccsm_flux (ng, tile)
-#  else
-            CALL bulk_flux (ng, tile)
 #  endif
-# endif
-# ifdef NCEP_FLUXES
+#  ifdef BULK_FLUXES
+#   ifdef CCSM_FLUXES
+            CALL ccsm_flux (ng, tile)
+#   else
+            CALL bulk_flux (ng, tile)
+#   endif
+#  endif
+#  ifdef NCEP_FLUXES
             CALL ncep_flux(ng, tile)
-# endif
-# ifdef BBL_MODEL
+#  endif
+#  ifdef BBL_MODEL
             CALL bblm (ng, tile)
-# endif
+#  endif
             CALL set_vbc (ng, tile)
-# if defined SSH_TIDES || defined UV_TIDES || defined POT_TIDES
+#  if defined SSH_TIDES || defined UV_TIDES || defined POT_TIDES
             CALL set_tides (ng, tile)
-# endif
+#  endif
           END DO
 !$OMP BARRIER
         END DO
-# ifdef NESTING
+#  ifdef NESTING
         CALL nesting (9)
-# endif
+#  endif
 
 #  if defined ICE_MODEL
 !
@@ -315,7 +342,8 @@
 !
         DO ng=1,Ngrids
           DO tile=first_tile(ng),last_tile(ng),+1
-            CALL set_zeta (ng, tile)
+            ! KMT commented for all case since will be inputs
+            !CALL set_zeta (ng, tile)
 # ifdef DIAGNOSTICS
             CALL set_diags (ng, tile)
 # endif
@@ -343,6 +371,7 @@
           IF ((exit_flag.ne.NoError).or.                                &
      &        ((iic(ng).eq.(ntend(ng)+1)).and.(ng.eq.Ngrids))) RETURN 
         END DO
+
 !
 !-----------------------------------------------------------------------
 !  Compute right-hand-side terms for 3D equations.
@@ -352,37 +381,57 @@
         DO ng=1,Ngrids
           DO tile=first_tile(ng),last_tile(ng),+1
             CALL rhs3d (ng, tile)
-# ifdef MY25_MIXING
+#  if !defined OFFLINE && ( !defined MIXCLIMATOLOGY || !defined AKXCLIMATOLOGY )
+#   ifdef MY25_MIXING
             CALL my25_prestep (ng, tile)
-# elif defined GLS_MIXING
+#   elif defined GLS_MIXING
             CALL gls_prestep (ng, tile)
-# endif
+#   endif
+#  endif
           END DO
 !$OMP BARRIER
         END DO
-# ifdef NESTING
+#  ifdef NESTING
         CALL nesting (12)
-# endif
+#  endif
 
 
-! !
-! !-----------------------------------------------------------------------
-! !  Recompute depths and thicknesses using the new time filtered
-! !  free-surface.
-! !  check this
-! !-----------------------------------------------------------------------
-! !
-!         DO ig=1,GridsInLayer(nl)
-!           ng=GridNumber(ig,nl)
-!           DO tile=first_tile(ng),last_tile(ng),+1
-!             CALL set_depth (ng, tile, iNLM)
-!           END DO
-! !$OMP BARRIER
-!         END DO
-! # ifdef NESTING
-!         CALL nesting (14)
-! # endif
+!
+!-----------------------------------------------------------------------
+!  Recompute depths and thicknesses using the new time filtered
+!  free-surface.
+!  KMT In this offline case, the fast time steps are not run. Instead,
+!  zeta is updated here with the average of this and the subsequent time
+!  step values. Then, depths are updated to use this new zeta value
+!  (stored in Zt_avg1). 
+!-----------------------------------------------------------------------
+!
+        DO ng=1,Ngrids
+          DO tile=first_tile(ng),last_tile(ng),+1
+            CALL set_avg_zeta (ng, tile, FIRSTCALL)
+            CALL set_depth (ng, tile, iNLM)
+          END DO
+!$OMP BARRIER
+        END DO
+#  ifdef NESTING
+        CALL nesting (14)
+#  endif
 
+
+! KMT this is where step3d_uv would occur in online case. Need to update
+! Huon here using the newly calculated depths and the next time step's
+! u field?
+!-----------------------------------------------------------------------
+!  KMT This calculates values for Huon, Hvom, Akt (indices 1 and 2)
+!  using updated averaged Zt_avg1 (zeta) value so that offline tracer is
+!  calculated correctly. 
+!-----------------------------------------------------------------------
+
+        DO ng=1,Ngrids
+          DO tile=first_tile(ng),last_tile(ng),+1
+            CALL set_massflux_avg (ng, tile, iNLM)
+          END DO
+        END DO
 
 !
 !-----------------------------------------------------------------------
@@ -392,24 +441,71 @@
 !
         DO ng=1,Ngrids
           DO tile=first_tile(ng),last_tile(ng),+1
+            ! KMT run this even if OCLIMATOLOGY is on because omega
+            ! needs to be updated mid-time loop for tracer advection.
             CALL omega (ng, tile, iNLM)
-# ifdef MY25_MIXING
+#  if !defined OFFLINE && ( !defined MIXCLIMATOLOGY || !defined AKXCLIMATOLOGY )
+#   ifdef MY25_MIXING
             CALL my25_corstep (ng, tile)
-# elif defined GLS_MIXING
+#   elif defined GLS_MIXING
             CALL gls_corstep (ng, tile)
-# endif
-# ifdef BIOLOGY
+#   endif
+#  endif
+
+! DDMITRY
+! -------------------------------------------
+! Biology and sediments
+! --------------------------------------------
+#  ifdef BIOLOGY
+            IF (Master) print*,'Calling biology'
             CALL biology (ng, tile)
-# endif
-# ifdef SEDIMENT
+#  endif
+#  ifdef SEDIMENT
+            IF (Master) print*,'Calling sediment'
             CALL sediment (ng, tile)
-# endif
+#  endif
           END DO
 !$OMP BARRIER
-        END DO
-# ifdef NESTING
+#  if defined FLOAT_OIL && defined OIL_EULR 
+! Update OIL information map Euler -> Lagrangian
+          IF (Lfloats(ng)) THEN
+#   ifdef _OPENMP
+            chunk_size=(Nfloats(ng)+numthreads-1)/numthreads
+            Lstr=1+MyThread*chunk_size
+            Lend=MIN(Nfloats(ng),Lstr+chunk_size-1)
+#   else
+            Lstr=1
+            Lend=Nfloats(ng)
+#   endif
+! ------------------------------------------------------------
+!  Update Oil state in Lagr frame: Euler-> Lagrangian mapping
+!  map oil info after biology/sediment weathering processes 
+! ------------------------------------------------------------
+            DO tile=last_tile(ng),first_tile(ng),-1
+#   ifdef OIL_MAP_DEBUG
+              IF (Master) THEN
+                print*,' =========  Calling euler2lagr ====='
+                CALL CPU_TIME(Tstart)
+              ENDIF
+#   endif
+              CALL euler2lagr(ng, tile, Lstr, Lend, nf(ng))
+#   ifdef OIL_MAP_DEBUG
+              IF (Master) THEN
+                CALL CPU_TIME(Tfinish)
+                print '("======  euler2lagr done, CPU Time: ",          &
+     &                    f8.6," sec")',Tfinish-Tstart
+                print*,'   '
+              ENDIF
+#   endif
+            ENDDO  ! tile 
+!$OMP BARRIER
+          END IF  ! IF Lfloats
+#  endif
+        END DO  ! ng
+! END DD
+#  ifdef NESTING
         CALL nesting (17)
-# endif
+#  endif
 # endif
 
 # ifndef TS_FIXED
@@ -418,20 +514,20 @@
 !  Time-step tracer equations.
 !-----------------------------------------------------------------------
 !
-# if defined OFFLINE_TPASSIVE || defined OFFLINE_BIOLOGY
+#  if defined OFFLINE_TPASSIVE || defined OFFLINE_BIOLOGY
         DO ng=1,Ngrids
           DO tile=first_tile(ng),last_tile(ng),+1
             CALL step3d_t (ng, tile)
-#  if defined ICE_MODEL && defined ICE_THERMO
+#   if defined ICE_MODEL && defined ICE_THERMO
             CALL ice_frazil(ng, tile)
-#  endif
+#   endif
           END DO
 !$OMP BARRIER
         END DO
-# ifdef NESTING
+#   ifdef NESTING
         CALL nesting (18)
-# endif
-# endif
+#   endif
+#  endif
 # endif
 
 # ifdef OFFLINE_FLOATS
@@ -445,6 +541,7 @@
 !-----------------------------------------------------------------------
 !
         DO ng=1,Ngrids
+          IF (Lfloats(ng)) THEN
 #  ifdef _OPENMP
             chunk_size=(Nfloats(ng)+numthreads-1)/numthreads
             Lstr=1+MyThread*chunk_size
@@ -453,18 +550,56 @@
             Lstr=1
             Lend=Nfloats(ng)
 #  endif
+#  if defined FLOAT_OIL && defined OIL_DEBUG
+! DDMITRY
+            IF (Master) THEN
+              print*,' Calling step_floats, Rank=',MyRank
+            ENDIF
+#  endif
+
             CALL step_floats (ng, Lstr, Lend)
+
+#  if defined FLOAT_OIL && defined OIL_EULR 
+! DDMITRY 
+! Map Lagrangian -> Euler oil floats for biology/sediments modules
+! model=iNLM nonlinear model assumed for now
+            DO tile=last_tile(ng),first_tile(ng),-1
+#   ifdef OIL_MAP_DEBUG
+              IF (Master) THEN
+                print*,'   ^^^^^^^^^^^^ TILE= ',tile
+                print*,'Calling lagr2euler'
+                CALL CPU_TIME(Tstart)
+              ENDIF
+#   endif
+              CALL lagr2euler (ng, tile, Lstr, Lend)
+#   ifdef OIL_MAP_DEBUG
+              IF (Master) THEN
+                CALL CPU_TIME(Tfinish)
+!                     print*,'lagr2euler done: '
+                print '("lagr2euler done, CPU Time: ",                  & 
+     &                       f8.6," sec")',Tfinish-Tstart
+                print*,' ^^^^^^^^^^^^^  '
+              ENDIF
+#   endif
+              IF ( (MOD(iic(ng),10).eq.0) .and.                         &
+     &                 (iic(ng).ne.ntstart(ng)) ) THEN
+                CALL metrics_oil (ng, tile, iNLM, Lstr, Lend)
+              ENDIF
+            ENDDO  ! tile
+
 !$OMP BARRIER
 !
 !  Shift floats time indices.
 !
-          nfp1(ng)=MOD(nfp1(ng)+1,NFT+1)
-          nf(ng)  =MOD(nf(ng)  +1,NFT+1)
-          nfm1(ng)=MOD(nfm1(ng)+1,NFT+1)
-          nfm2(ng)=MOD(nfm2(ng)+1,NFT+1)
-          nfm3(ng)=MOD(nfm3(ng)+1,NFT+1)
-        END DO
+            nfp1(ng)=MOD(nfp1(ng)+1,NFT+1)
+            nf(ng)  =MOD(nf(ng)  +1,NFT+1)
+            nfm1(ng)=MOD(nfm1(ng)+1,NFT+1)
+            nfm2(ng)=MOD(nfm2(ng)+1,NFT+1)
+            nfm3(ng)=MOD(nfm3(ng)+1,NFT+1)
+#  endif
 # endif
+          END IF  ! Lfloats
+        END DO  ! ng
       END DO STEP_LOOP
 
       RETURN

@@ -147,7 +147,7 @@
 
       real(r8) :: GrdVol(IminS:ImaxS,JminS:JmaxS,N(ng))
 !      real(r8) :: MoilGrd(IminS:ImaxS,JminS:JmaxS,N(ng),Nocmp)
-      real(r8) :: rCoil(Nocmp)                ! fraction of oil reduced by biodegr
+      real(r8) :: rCoil(Nocmp)                ! fraction of oil reduced by biodegr / sedimentation
       real(r8) :: wfr0(Nocmp), wfr1(Nocmp)    ! old/new weight fractions
       real(r8) :: Moil0, Moil1                ! oil mass in 1 grid cell
       real(r8) :: moil_prt0                   ! oil mass in 1 oil particle
@@ -161,6 +161,8 @@
 
 #ifdef OIL_MAP_DEBUG
       integer :: ifchck, cc
+      integer :: nrcoil(Nocmp), brcoil(Nocmp)
+      real(r8) :: mnrcoil(Nocmp), mxrcoil(Nocmp)
 #endif
 
 #include "set_bounds.h"
@@ -220,6 +222,10 @@
 #ifdef OIL_MAP_DEBUG
       ifchck=4
       lchck=.TRUE.
+      nrcoil=0
+      brcoil=0
+      mnrcoil=1.0_r8
+      mxrcoil=0.0_r8
 #endif
       DO k=1,N(ng)
         DO j=Jstr,Jend
@@ -231,6 +237,16 @@
 !
             DO ic=1,Nocmp
               rCoil(ic)=Coil1(i,j,k,ic)/Coil0(i,j,k,ic)
+#ifdef OIL_MAP_DEBUG
+              IF (abs(rCoil(ic)-1.0_r8).gt.1.0e-15_r8) THEN
+                nrcoil(ic)=nrcoil(ic)+1
+                IF (rCoil(ic).lt.mnrcoil(ic)) mnrcoil(ic)=rCoil(ic)
+                IF (rCoil(ic).gt.mxrcoil(ic)) mxrcoil(ic)=rCoil(ic)
+              ENDIF
+              IF ((rCoil(ic)-1.0_r8).gt.1.0e-15) THEN
+                brcoil(ic)=brcoil(ic)+1
+              ENDIF
+#endif
             ENDDO
 !
 ! Old/New mass of oil in the grid cell
@@ -414,13 +430,16 @@
             DO il=1,nfgrd
               l=lfltgrd(il)
               vo0=Voil0(l)
-              vo1=alfa*vo0
-             
-              Doil1(l)=2.0_r8*(3.0_r8/4.0_r8*vo1/pi)**(1./3.)
+
+              IF (abs(alfa-1.0_r8).gt.1.0e-20_r8) THEN
+                vo1=alfa*vo0
+                Doil1(l)=2.0_r8*(3.0_r8/4.0_r8*vo1/pi)**(1.0_r8/3.0_r8)
+              ELSE
+                Doil1(l)=Doil0(l)
+              ENDIF
                  
 # ifdef OIL_MAP_DEBUG
               IF (lchck .and. il.eq.ifchck) THEN
-!                print*,'eulr2lgr:','vo0=',vo0,'vo1=',vo1
                 print*,'eulr2lgr: l=',l,',alfa=',alfa,                  &
      &                 'Doil0=',Doil0(l),' Doil1=',Doil1(l)     
                 lchck=.FALSE.
@@ -444,21 +463,32 @@
                 szoil0(l)=Doil1(l)
 !              ENDIF
 !
-# ifdef OIL_MAP_DEBUG
-              IF (il.eq.ifchck) THEN
-                print*,'l=',l,'Rhoil1=',Rhoil1(l),'Doil1=',Doil1(l)
-                print*,'eulr2lagr: iroil,nf=',track(iroil,nf(ng),l),    &
-     &                 ' iroil,nfp1=',track(iroil,nfp1,l)
-                print*,'eulr2lagr: isizo,nf=',track(isizo,nf(ng),l),    & 
-     &                 'isizo,nfp1=',track(isizo,nfp1(ng),l)
-              ENDIF
-# endif
+!# ifdef OIL_MAP_DEBUG
+!              IF (il.eq.ifchck) THEN
+!                print*,'l=',l,'Rhoil1=',Rhoil1(l),'Doil1=',Doil1(l)
+!                print*,'eulr2lagr: iroil,nf=',track(iroil,nf(ng),l),    &
+!     &                 ' iroil,nfp1=',track(iroil,nfp1,l)
+!                print*,'eulr2lagr: isizo,nf=',track(isizo,nf(ng),l),    & 
+!     &                 'isizo,nfp1=',track(isizo,nfp1(ng),l)
+!              ENDIF
+!# endif
             ENDDO
 
 
           ENDDO
         ENDDO
       ENDDO
+# ifdef OIL_MAP_DEBUG
+      IF (maxval(nrcoil).gt.0) THEN
+        print*,'eulr2lgr: Rank',MyRank,' # Cnew/Cold < 1 =',nrcoil
+        print*,'eulr2lgr: Rank',MyRank,' min Cnew/Cold   =',mnrcoil
+        print*,'eulr2lgr: Rank',MyRank,' max Cnew/Cold   =',mxrcoil
+      ENDIF
+! This shouldn't happen:
+      IF (maxval(brcoil).gt.0) THEN
+        print*,'!??! eulr2lgr: Rank',MyRank,' # Cnew/Cold > 1 =',brcoil
+      ENDIF
+# endif
 
       RETURN
       END SUBROUTINE euler2lagr_tile

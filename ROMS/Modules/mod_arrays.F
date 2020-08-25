@@ -53,6 +53,11 @@
 #if defined SEDIMENT && defined SED_FLOCS
       USE mod_sedflocs, ONLY : allocate_sedflocs, initialize_sedflocs
 #endif
+! lcui start
+#if defined SEDIMENT && defined SED_OPA
+         USE mod_sedopa, ONLY : allocate_sedopa, initialize_sedopa
+#endif
+! lcui end
 #if defined VEGETATION 
       USE mod_vegarr,ONLY:allocate_vegarr, initialize_vegarr
 #endif 
@@ -181,6 +186,11 @@
 #if defined SEDIMENT && defined SED_FLOCS
           CALL allocate_sedflocs(ng, LBi, UBi, LBj, UBj)
 #endif
+! lcui start
+#if defined SEDIMENT && defined SED_OPA
+         CALL allocate_sedopa(ng, LBi, UBi, LBj, UBj)
+#endif
+! lcui end
 #if defined VEGETATION
           CALL allocate_vegarr(ng, LBi, UBi, LBj, UBj)
 #endif
@@ -267,6 +277,11 @@
 #if defined SEDIMENT && defined SED_FLOCS
             CALL initialize_sedflocs (ng, TILE, model)
 #endif
+! lcui start
+#if defined SEDIMENT && defined SED_OPA
+         CALL initialize_sedopa (ng, TILE, model)
+#endif
+! lcui end
 #if defined VEGETATION 
             CALL initialize_vegarr (ng, TILE, model)
 #endif

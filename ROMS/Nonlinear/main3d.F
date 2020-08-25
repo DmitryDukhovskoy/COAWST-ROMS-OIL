@@ -165,7 +165,7 @@
 ! DDMITRY
       USE lagr2euler_mod
       USE metrics_oil_mod
-      USE euler2lagr_mod  ! later, use only if defined biology or sediment
+      USE euler2lagr_mod  
 #   ifdef OIL_BIO
       USE bio_oil_mod
 #   endif
@@ -918,6 +918,7 @@
                 CALL biology (ng, tile)
 # endif
 # ifdef SEDIMENT
+                IF (Master) print*,'Calling sediment'
                 CALL sediment (ng, tile)
 # endif
               END DO
@@ -940,22 +941,22 @@
                 DO tile=last_tile(ng),first_tile(ng),-1
 #   ifdef OIL_MAP_DEBUG
                   IF (Master) THEN
-                     print*,' =========  Calling euler2lagr ====='
-                     CALL CPU_TIME(Tstart)
-                   ENDIF                 
+                    print*,' =========  Calling euler2lagr ====='
+                    CALL CPU_TIME(Tstart)
+                  ENDIF                 
 #   endif
 !
-                 CALL euler2lagr(ng, tile, Lstr, Lend, nf(ng))
+                  CALL euler2lagr(ng, tile, Lstr, Lend, nf(ng))
 !
 #   ifdef OIL_MAP_DEBUG
-                   IF (Master) THEN
-                     CALL CPU_TIME(Tfinish)
-                     print '("======  euler2lagr done, CPU Time: ",     &
+                  IF (Master) THEN
+                    CALL CPU_TIME(Tfinish)
+                    print '("======  euler2lagr done, CPU Time: ",     &
      &                       f8.6," sec")',Tfinish-Tstart
-                     print*,'   '
-                   ENDIF                
+                    print*,'   '
+                  ENDIF                
 #   endif
-                 ENDDO  ! tile 
+                ENDDO  ! tile 
 !$OMP BARRIER
               END IF  ! IF Lfloats
 # endif

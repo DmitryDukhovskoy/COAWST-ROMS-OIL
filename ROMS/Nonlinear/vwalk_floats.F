@@ -121,7 +121,14 @@
       logical, intent(in) :: Predictor
 !
 # ifdef ASSUMED_SHAPE
+!      logical, intent(in) :: bounded(:)
+!MMMM added by Xu Chen
+#if defined OFFLINE_FLOATS && defined FLOAT_VWALK
+      logical, intent(inout) :: bounded(:)
+# else
       logical, intent(in) :: bounded(:)
+# endif
+!WWWW added by Xu Chen
       logical, intent(in) :: my_thread(Lstr:)
 
       real(r8), intent(in) :: Tinfo(0:,:)
@@ -130,7 +137,14 @@
       real(r8), intent(inout) :: nudg(Lstr:)
       real(r8), intent(inout) :: track(:,0:,:)
 # else
+!      logical, intent(in) :: bounded(Nfloats(ng))
+!MMMM added by Xu Chen
+#if defined OFFLINE_FLOATS && defined FLOAT_VWALK
+      logical, intent(inout) :: bounded(Nfloats(ng))
+# else
       logical, intent(in) :: bounded(Nfloats(ng))
+# endif
+!WWWW added by Xu Chen
       logical, intent(in) :: my_thread(Lstr:Lend)
 
       real(r8), intent(in) :: Tinfo(0:izrhs,Nfloats(ng))
@@ -231,7 +245,7 @@
         ELSE
           nudg(l)=0.0_r8
         END IF
-# if defined FLOAT_OIL && defined OIL_DEBUG
+!# if defined FLOAT_OIL && defined OIL_DEBUG
 ! DDMITRY
 !        IF (l.eq.ifltX) THEN
 !          print*,'>> vwalk_floats: l=',l,'MyRank=',MyRank, &
@@ -239,7 +253,7 @@
 !     &           'rwalk=',rwalk(l),'Diffus=',track(ifakt,nfindx,l)
 !        ENDIF
 ! END DD
-# endif
+!# endif
       END DO
 
 # ifdef DIAPAUSE

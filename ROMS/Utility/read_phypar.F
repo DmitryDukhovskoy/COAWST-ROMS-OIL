@@ -395,10 +395,12 @@
 #endif
 #if defined SEDIMENT || defined BBL_MODEL
               CALL initialize_sediment
+             if (Master) print*,'Initializing sediment completed '  ! DDMITRY
 #endif
 #ifdef VEGETATION
               CALL initialize_vegetation
 #endif
+              if (Master) print*,'Initializing scalars, domain params ...' !DDMITRY
               CALL initialize_param    ! Continue allocating/initalizing
               CALL allocate_scalars    ! variables since the application
               CALL initialize_scalars  ! number of nested grids and

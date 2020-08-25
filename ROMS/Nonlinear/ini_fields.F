@@ -326,7 +326,7 @@
 
 # include "set_bounds.h"
 
-# ifdef SOLVE3D
+# if defined SOLVE3D && !defined OFFLINE
 !
 !-----------------------------------------------------------------------
 !  If not perfect restart, initialize other time levels for 3D momentum.
@@ -364,6 +364,7 @@
             END DO
           END IF
         END DO
+!# if !defined OFFLINE
 !
 !  Apply boundary conditions.
 !
@@ -388,8 +389,10 @@
      &                   IminS, ImaxS, JminS, JmaxS,                    &
      &                   nstp, nnew,                                    &
      &                   v)
+!# endif
       END IF
 !
+# if !defined OFFLINE
       IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
         CALL exchange_u3d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
@@ -405,6 +408,7 @@
      &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
      &                          v(:,:,:,nnew))
       END IF
+# endif
 
 #  ifdef DISTRIBUTE
 !
@@ -417,8 +421,7 @@
 #  endif
 # endif
 
-# ifdef SOLVE3D
-!
+# if defined SOLVE3D && !defined OFFLINE
 !-----------------------------------------------------------------------
 !  If not perfect restart, compute vertically-integrated momentum
 !  (ubar, vbar) from initial 3D momentum (u, v).
@@ -536,7 +539,7 @@
      &                    ubar(:,:,knew), vbar(:,:,knew))
 #  endif
 
-# else
+# elif !defined OFFLINE
 !
 !-----------------------------------------------------------------------
 !  If not perfect restart, initialize other time levels for 2D momentum.
@@ -644,7 +647,7 @@
 #  endif
 # endif
 
-# ifdef SOLVE3D
+# if defined SOLVE3D && !defined OFFLINE
 !
 !-----------------------------------------------------------------------
 !  If not perfect restart, initialize other time levels for tracers.

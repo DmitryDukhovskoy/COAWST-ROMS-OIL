@@ -104,23 +104,16 @@
         integer, parameter :: iyrhs = 8          ! y-slope
         integer, parameter :: izrhs = 9          ! z-slope
         integer, parameter :: ifden = 10         ! density anomaly
-# ifdef FLOAT_VWALK
+!
+! OFFLINE definitions edited by Xu Chen
+! DDMITRY - ADD OIL FLOAT parameters - also need to change mod_param.F  NFV
+#ifndef OFFLINE_FLOATS
+#  ifdef FLOAT_VWALK
         integer, parameter :: ifakt = 11         ! diffusivity, Akt
         integer, parameter :: ifdak = 12         ! d(Akt)/d(s)
-# endif
-# ifdef OFFLINE_FLOATS
-        integer, parameter :: ixspc = 11         ! x-space location
-        integer, parameter :: iyspc = 12         ! y-space location
-        integer, parameter :: iwdph = 13         ! water depth
-        integer, parameter :: ifHzz = 14         ! Hz
-#  ifdef FLOAT_VWALK
-        integer, parameter :: ifakt = 15         ! diffusivity, Akt
-        integer, parameter :: ifdak = 16         ! d(Akt)/d(s)
 #  endif
-# endif
-# ifdef FLOAT_OIL
-! DDMITRY - ADD OIL FLOAT parameters - also need to change mod_param.F NFV
-#  ifdef FLOAT_VWALK
+#  ifdef FLOAT_OIL
+#    ifdef FLOAT_VWALK
         integer, parameter :: i1oHz = 13         ! 1/Hz
         integer, parameter :: iroil = 14         ! oil density
         integer, parameter :: iwoil = 15         ! oil w-velocity
@@ -130,7 +123,7 @@
         integer, parameter :: isrfo = 19         ! oil surface time, sec
         integer, parameter :: ixwnd = 20         ! surf wind at oil location, x-slope
         integer, parameter :: iywnd = 21         ! surf wind at oil location, y-slope
-#  else
+#    else
         integer, parameter :: i1oHz = 11         ! 1/Hz
         integer, parameter :: iroil = 12         ! oil density
         integer, parameter :: iwoil = 13         ! oil w-velocity
@@ -140,9 +133,44 @@
         integer, parameter :: isrfo = 17         ! oil surface time, sec
         integer, parameter :: ixwnd = 18         ! surf wind at oil location, u comp
         integer, parameter :: iywnd = 19         ! surf wind at oil location, v comp
+#    endif
 #  endif
-! DD END
-# endif
+#else
+        integer, parameter :: ixspc = 11         ! x-space location
+        integer, parameter :: iyspc = 12         ! y-space location
+        integer, parameter :: iwdph = 13         ! water depth
+        integer, parameter :: ifHzz = 14         ! Hz
+#  ifdef FLOAT_VWALK 
+        integer, parameter :: ifakt = 15         ! diffusivity, Akt
+        integer, parameter :: ifdak = 16         ! d(Akt)/d(s)
+#  endif
+#  ifdef FLOAT_OIL
+#   ifdef FLOAT_VWALK
+        integer, parameter :: i1oHz = 17         ! 1/Hz
+        integer, parameter :: iroil = 18         ! oil density
+        integer, parameter :: iwoil = 19         ! oil w-velocity
+        integer, parameter :: isizo = 20         ! oil particle size
+        integer, parameter :: isats = 21         ! oil saturates component fraction 
+        integer, parameter :: iarom = 22         ! oil aromatics component fraction 
+        integer, parameter :: isrfo = 23         ! oil surface time, sec
+        integer, parameter :: ixwnd = 24         ! surf wind at oil location, x-slope
+        integer, parameter :: iywnd = 25         ! surf wind at oil location, y-slope
+#   else
+        integer, parameter :: i1oHz = 15         ! 1/Hz
+        integer, parameter :: iroil = 16         ! oil density
+        integer, parameter :: iwoil = 17         ! oil w-velocity
+        integer, parameter :: isizo = 18         ! oil particle size
+        integer, parameter :: isats = 19         ! oil saturates component fraction 
+        integer, parameter :: iarom = 20         ! oil aromatics component fraction 
+        integer, parameter :: isrfo = 21         ! oil surface time, sec
+        integer, parameter :: ixwnd = 22         ! surf wind at oil location, u comp
+        integer, parameter :: iywnd = 23         ! surf wind at oil location, v comp
+#   endif
+#  endif
+#endif
+! END DD
+!MMMM END  Xu Chen
+
 # ifdef FLOAT_OYSTER
 #  ifdef FLOAT_VWALK
         integer, parameter :: i1oHz = 13         ! 1/Hz
@@ -198,9 +226,9 @@
 ! DfsOil  - eddy coefficient approximating diffusivity, m2/s
 ! see read_fltpar.F
 !
-        integer :: Nocmp
-        real (r8) :: DoilMn, FlxVoilDay, VoilFlt
-        real(r8) :: CWndOil, DfsOil
+        integer    :: Nocmp
+        real (r8)  :: DoilMn, FlxVoilDay, VoilFlt
+        real(r8)   :: CWndOil, DfsOil
         real(r8), allocatable ::  RhoOilComp(:) 
 # endif
 ! END DD
@@ -310,10 +338,6 @@
 # endif
 # ifdef FLOAT_OIL
 ! DDMITRY
-!            IF (iflt==4116) THEN
-!              print*,'INITIALIZING: Float =',iflt,' frroil, wfroil'
-!            ENDIF
- 
             DO i=1,Nocmp
               DRIFTER(ng) % ROilCmp(iflt,i) = 0.0_r8 
               DRIFTER(ng) % wfroil0(iflt,i) = 0.0_r8
@@ -371,12 +395,12 @@
 #  else
         ic=19
 #  endif
-        Nocmp = 0 ! # of oil compnents initial value, set in oil*.in
-        DoilMn = -999.0 ! mean oil size, set in oil*.in
+        Nocmp      = 0      ! # of oil compnents initial value, set in oil*.in
+        DoilMn     = -999.0 ! mean oil size, set in oil*.in
         FlxVoilDay = -999.0 ! oil flux rate, m3/day
-        VoilFlt = -999.0    ! oil volume in 1 float
-        DfsOil = -999.0 ! oil diffusiv., used in rand walk approxim. 
-        CWndOil = -999.0 ! wind-oil coefficient
+        VoilFlt    = -999.0 ! oil volume in 1 float
+        DfsOil     = -999.0 ! oil diffusiv., used in rand walk approxim. 
+        CWndOil    = -999.0 ! wind-oil coefficient
 # else
 #  ifdef FLOAT_VWALK
         ic=12

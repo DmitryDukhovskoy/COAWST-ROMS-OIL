@@ -2088,6 +2088,19 @@
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+18)=' OFFLINE_TPASSIVE,'
 #endif
+! DDMITRY
+#if defined OFFLINE_FLOATS
+      IF (Master) WRITE (stdout,20) 'OFFLINE_FLOATS',                  &
+     &   'Offline floats.'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+18)=' OFFLINE_FLOATS,'
+#endif
+#if defined AKTCLIMATOLOGY
+      IF (Master) WRITE (stdout,20) 'AKTCLIMATOLOGY',                  &
+     &   'T diffusivity (use model fields from history files).'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+18)=' AKTCLIMATOLOGY,'
+#endif
 #if defined ONE_TRACER_SOURCE
       IF (Master) WRITE (stdout,20) 'ONE_TRACER_SOURCE',                &
      &   'One value per tracer for all sources.'
@@ -2633,6 +2646,14 @@
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+11)=' SED_FLOCS,'
 # endif
+! lcui start
+# ifdef SED_OPA
+      IF (Master) WRITE (stdout,20) 'SED_OPA',                          &
+     &   'Activate sediment-oil aggregation.'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+11)=' SED_OPA,'
+# endif
+! lcui end
 # ifdef FLOC_TURB_DISS
       IF (Master) WRITE (stdout,20) 'FLOC_TURB_DISS',                   &
      &   'Activate dissipation for flocculation based on turbulence.'

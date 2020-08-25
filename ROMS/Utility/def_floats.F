@@ -125,17 +125,18 @@
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
      &                 __FILE__)) RETURN
 
-#  ifdef SEDIMENT
-        status=def_dim(ng, iNLM, FLT(ng)%ncid, ncname, 'NST',           &
-     &                 NST, DimIDs(32))
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
-
-        status=def_dim(ng, iNLM, FLT(ng)%ncid, ncname, 'Nbed',          &
-     &                 Nbed, DimIDs(16))
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
-#  endif
+! DDMITRY
+!#  ifdef SEDIMENT
+!        status=def_dim(ng, iNLM, FLT(ng)%ncid, ncname, 'NST',           &
+!     &                 NST, DimIDs(32))
+!        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+!     &                 __FILE__)) RETURN
+!
+!        status=def_dim(ng, iNLM, FLT(ng)%ncid, ncname, 'Nbed',          &
+!     &                 Nbed, DimIDs(16))
+!        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+!     &                 __FILE__)) RETURN
+!#  endif
 
 #  if defined VARIABLE_CDOM && defined SPECTRAL_LIGHT
          status=def_dim(ng, iNLM, FLT(ng)%ncid, ncname, 'Ndom',          &
@@ -499,8 +500,9 @@
      &                 __FILE__)) RETURN
 !
 !  Define tracer type variables.
-!
-        DO itrc=1,NT(ng)
+!  DDMITRY - keep only active tracers
+!        DO itrc=1,NT(ng) ! DDMITRY
+        DO itrc=1,NAT
           Vinfo( 1)=Vname(1,idTvar(itrc))
           Vinfo( 2)=Vname(2,idTvar(itrc))
           Vinfo( 3)=Vname(3,idTvar(itrc))
@@ -510,13 +512,14 @@
           Vinfo(24)='_FillValue'
           Aval(6)=spval
 #  endif
-#  ifdef SEDIMENT
-          DO i=1,NST
-            IF (itrc.eq.idsed(i)) THEN
-              WRITE (Vinfo(19),40) 1000.0_r8*Sd50(i,ng)
-            END IF
-          END DO
-#  endif
+! DDMITRY
+!#  ifdef SEDIMENT
+!          DO i=1,NST
+!            IF (itrc.eq.idsed(i)) THEN
+!              WRITE (Vinfo(19),40) 1000.0_r8*Sd50(i,ng)
+!            END IF
+!          END DO
+!#  endif
           status=def_var(ng, iNLM, FLT(ng)%ncid, FLT(ng)%Tid(itrc),     &
      &                   NF_FOUT, 2, fgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__,                  &

@@ -303,8 +303,9 @@
      &               __FILE__)) RETURN
 !
 !  Write out tracer type variables.
-!
-      DO itrc=1,NT(ng)
+!  DDMITRY - write out only active tracers in float netcdf
+!      DO itrc=1,NT(ng)
+      DO itrc=1,NAT  ! DDMITRY
         DO l=1,Nfloats(ng)
           IF (DRIFTER(ng)%bounded(l)) THEN
 #  ifdef OFFLINE_FLOATS

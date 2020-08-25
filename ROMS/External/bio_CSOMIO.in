@@ -90,7 +90,7 @@
 ! Zooplankton half-saturation constant (squared) for ingestion
 ! [millimole_N m-3]^2, {1.0d0}.
 
-       K_Phy == 2.0d0
+       K_Phy == 1.0d0
 
 ! Maximum chlorophyll to carbon ratio [mg_Chl/mg_C], {0.0535d0}.
 
@@ -407,7 +407,7 @@ ad_LBC(isTvar) ==   Per     Per     Per     Per \    ! idbio( 1), NO3
 ! climatology fields: [NBT,Ngrids] values are expected. See glossary below
 ! for details.
 
-  LtracerCLM == 18*F
+  LtracerCLM == T T 16*F
 
 ! Logical switches (TRUE/FALSE) to nudge the desired biological tracer
 ! climatology field. If not analytical climatology fields, users need to
@@ -415,7 +415,7 @@ ad_LBC(isTvar) ==   Per     Per     Per     Per \    ! idbio( 1), NO3
 ! climatology NetCDF file that are needed for nudging; [NBT,Ngrids]
 ! values are expected. See glossary below for details.
 
-  LnudgeTCLM == 18*F
+  LnudgeTCLM == T T 16*F
 
 ! Logical switches (TRUE/FALSE) to activate writing of biological fields
 ! into HISTORY output file: [1:NBT,Ngrids].

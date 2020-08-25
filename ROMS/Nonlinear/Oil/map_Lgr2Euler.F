@@ -151,7 +151,7 @@
 !
 ! Count # of floats in every grid cell
 ! Then calculate oil mass in every gird cell
-! and finally oil conc = M oil / grid cell
+! and finally oil conc = M oil / Vgrid cell
 ! Do this for all components 
       DO k=1,N(ng)
         GrdVol(IminS:ImaxS,JminS:JmaxS,k)=                              &

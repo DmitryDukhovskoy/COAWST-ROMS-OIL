@@ -428,7 +428,6 @@
      &                    t(:,:,:,nnew,:))
 #  endif
 # endif
-
 # ifdef OFFLINE_BIOLOGY
       T_LOOP : DO ibt=1,NBT
         itrc=idbio(ibt)
@@ -702,7 +701,6 @@
               END IF
             END DO
           END IF
-
 # if defined NESTING && !defined ONE_WAY
 !
 !  If refinement grids, extract tracer horizontal advection fluxes
@@ -1539,7 +1537,6 @@
 # endif
         END DO
       END DO
-
 # if defined AGE_MEAN && defined T_PASSIVE
 !
 !-----------------------------------------------------------------------
@@ -1651,7 +1648,8 @@
             END DO
           END DO
         END IF
-
+IF (itrc.eq.3) THEN
+END IF
 # ifdef MASKING
 !
 !  Apply Land/Sea mask.

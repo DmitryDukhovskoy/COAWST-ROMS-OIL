@@ -101,6 +101,11 @@
 #  if defined SED_FLOCS
     USE sed_flocs_mod, ONLY : sed_flocmod
 #  endif
+! lcui start
+#  if defined SED_OPA
+    USE sed_opa_mod, ONLY : sed_opamod
+#  endif
+! lcui end
 # endif
       USE sed_surface_mod, ONLY : sed_surface
 !
@@ -131,6 +136,14 @@
       CALL sed_flocmod (ng, tile)
 #  endif
 !
+! lcui start
+#  ifdef SED_OPA
+!-----------------------------------------------------------------------
+!  Compute sediment-oil interactions
+!-----------------------------------------------------------------------
+      CALL sed_opamod (ng, tile)
+#  endif
+! lcui end
 !-----------------------------------------------------------------------
 !  Compute sediment vertical settling.
 !-----------------------------------------------------------------------

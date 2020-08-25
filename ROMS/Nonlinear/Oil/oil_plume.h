@@ -921,19 +921,19 @@
       END SUBROUTINE oil_density_ini
 !
 !*********************************************************************** 
-      SUBROUTINE oil_density(roil,wfr0,ROilCmp)
+      SUBROUTINE oil_density(roil,wfr0,ROilCmp1)
 !*********************************************************************** 
 ! Calculate density of oil particles given
 ! wiegth fraction of oil components wfr0
-! oil component densities ROilCmp
+! oil component densities ROilCmp1
 ! Number of components is Ncmp
       USE mod_floats
 
-      real(r8), intent(in) :: wfr0(Nocmp), ROilCmp(Nocmp)
+      real(r8), intent(in) :: wfr0(Nocmp), ROilCmp1(Nocmp)
       real(r8), intent(inout) :: roil
       real(r8) :: dmm
 
-      dmm=sum(wfr0/RhoOilComp)
+      dmm=sum(wfr0/ROilCmp1)
       roil=1.0_r8/dmm           ! mean oil particledensity, in the float
 
       END SUBROUTINE oil_density

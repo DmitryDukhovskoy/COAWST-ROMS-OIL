@@ -178,9 +178,15 @@
 !
 ! Oil floats identification indices
 !
+# ifndef OFFLINE_FLOATS
         integer  :: idroil = -7   ! oil float density
         integer  :: idsizo = -8   ! oil float size (diameter)
         integer  :: idwfro = -9   ! weight fractions of oil components
+# else
+        integer  :: idroil = -10  ! oil float density
+        integer  :: idsizo = -11  ! oil float size (diameter)
+        integer  :: idwfro = -12  ! weight fractions of oil components
+# endif
 ! DD END
 #endif
 !
@@ -196,7 +202,22 @@
 !
 !  Input/output identification indices.
 !
-        integer  :: idAclm        ! 3D Aks (salinity) climatology
+#if defined AKSCLIMATOLOGY || defined AKXCLIMATOLOGY
+        integer  :: idAKsclm        ! 3D Aks (salinity) climatology
+#endif
+#if defined AKVCLIMATOLOGY || defined AKXCLIMATOLOGY
+        integer  :: idAKvclm        ! 3D Akv (momemtum) climatology
+#endif
+#if defined AKTCLIMATOLOGY || defined AKXCLIMATOLOGY
+        integer  :: idAKtclm        ! 3D Akt (temperature) climatology
+#endif
+#if defined TKECLIMATOLOGY || defined MIXCLIMATOLOGY
+        integer  :: idtkeclm        ! 3D TKE climatology
+#endif
+#if defined GLSCLIMATOLOGY || defined MIXCLIMATOLOGY
+        integer  :: idglsclm        ! 3D gls (length scale) climatology
+#endif
+!        integer  :: idAclm        ! 3D Aks (salinity) climatology
         integer  :: idAice        ! fraction of cell covered by ice
         integer  :: idAlbe        ! shortwave albedo
         integer  :: idbath        ! bathymetry
@@ -1070,6 +1091,7 @@
 !
 !  Open input variable information file.
 !
+      if (Master) print*,'Read variable info from ',trim(varname)       ! DDMITRY
       OPEN (inp, FILE=TRIM(varname), FORM='formatted', STATUS='old',    &
      &      ERR=10)
       GOTO 20
@@ -1250,6 +1272,27 @@
               idGhat(itemp)=varid
             CASE ('idGhat(isalt)')
               idGhat(isalt)=varid
+#if defined AKTCLIMATOLOGY || defined AKXCLIMATOLOGY
+            CASE ('idAKtclm')  !Added by DJ
+              idAKtclm=varid
+              print*,'idAKtclm=',idAKtclm       ! DD
+#endif
+#if defined AKSCLIMATOLOGY || defined AKXCLIMATOLOGY
+            CASE ('idAKsclm')  !Added by DJ
+              idAKsclm=varid
+#endif
+#if defined AKVCLIMATOLOGY || defined AKXCLIMATOLOGY
+            CASE ('idAKvclm')  !Added by DJ
+              idAKvclm=varid
+#endif
+#if defined TKECLIMATOLOGY || defined MIXCLIMATOLOGY
+            CASE ('idtkeclm')  !Added by DJ
+              idtkeclm=varid
+#endif
+#if defined GLSCLIMATOLOGY || defined MIXCLIMATOLOGY
+            CASE ('idglsclm')  !Added by DJ
+              idglsclm=varid
+#endif
             CASE ('idMtke')
               idMtke=varid
             CASE ('idMtls')
@@ -2220,14 +2263,6 @@
 #  include <csomio_var.h>
 # endif
 #endif
-
-! XCHEN MMMM
-! DDMITRY - commented out, this is included above
-!# if defined BIOLOGY && defined BIO_GENOME  
-!#  include <genome_var.h>
-!#endif  
-! END DD
-! XCHEN WWWW
 
 #if defined SEDIMENT || defined BBL_MODEL
 #  include <sediment_var.h>

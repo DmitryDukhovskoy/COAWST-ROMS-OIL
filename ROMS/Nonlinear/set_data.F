@@ -104,9 +104,21 @@
 # endif
 
       integer :: ILB, IUB, JLB, JUB
-      integer :: i, ic, itrc, j, k, my_tile
+      integer :: i, ic, itrc, j, k, my_tile, l
 
       real(r8) :: cff, cff1, cff2
+
+# ifdef OFFLINE
+      real(r8) :: sshtemp(LBi:UBi,LBj:UBj)
+      real(r8) :: utemp(LBi:UBi,LBj:UBj,N(ng))
+      real(r8) :: vtemp(LBi:UBi,LBj:UBj,N(ng))
+#  if defined AKTCLIMATOLOGY || defined AKXCLIMATOLOGY
+      real(r8) :: Akttemp(LBi:UBi,LBj:UBj,0:N(ng))
+#  endif
+#  if defined AKSCLIMATOLOGY || defined AKXCLIMATOLOGY
+      real(r8) :: Akstemp(LBi:UBi,LBj:UBj,0:N(ng))
+#  endif
+# endif
 
 # include "set_bounds.h"
 !
@@ -2003,11 +2015,30 @@
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
      &                 __FILE__)) RETURN
 # endif
+
 # if defined OFFLINE
-        DO j=Jstr,Jend
-          DO i=Istr,Iend
+
+! KMT added to save future zeta value so that mass fluxes are more accurately
+! calculated for offline tracer advection.
+! not set up to work with ANA_SSH currently
+
+      ! change time to force accessing the future zeta snapshot
+      time(ng)=time(ng)+dt(ng)
+      CALL set_2dfld_tile (ng, tile, iNLM, idSSHc,                    &
+     &                       LBi, UBi, LBj, UBj,                        &
+     &                       CLIMA(ng)%sshG,                            &
+     &                       sshtemp,                                   &
+     &                       update)
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
+      ! undo change to time
+      time(ng)=time(ng)-dt(ng)
+!
+        DO j=Jstr-1,Jend+1
+          DO i=Istr-1,Iend+1
             OCEAN(ng)%zeta(i,j,1) = CLIMA(ng)%ssh(i,j)
-            OCEAN(ng)%zeta(i,j,2) = CLIMA(ng)%ssh(i,j)
+            ! save subsequent values for zeta for access later in time loop
+            OCEAN(ng)%zeta(i,j,2) = sshtemp(i,j) ! CLIMA(ng)%ssh(i,j)
           END DO
         END DO
         IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
@@ -2051,8 +2082,8 @@
      &                 __FILE__)) RETURN
 # endif
 # if defined OFFLINE
-        DO j=Jstr,Jend
-          DO i=Istr,Iend
+        DO j=Jstr-1,Jend+1
+          DO i=Istr-1,Iend+1
             OCEAN(ng)%ubar(i,j,1) = CLIMA(ng)%ubarclm(i,j)
             OCEAN(ng)%ubar(i,j,2) = CLIMA(ng)%ubarclm(i,j)
             OCEAN(ng)%vbar(i,j,1) = CLIMA(ng)%vbarclm(i,j)
@@ -2104,11 +2135,36 @@
      &                 __FILE__)) RETURN
 #  endif
 #  if defined OFFLINE
+
+      ! KMT added to access subsequent time step value
+      time(ng)=time(ng)+dt(ng)
+      CALL set_3dfld_tile (ng, tile, iNLM, idUclm,                    &
+     &                       LBi, UBi, LBj, UBj, 1, N(ng),              &
+     &                       CLIMA(ng)%uclmG,                           &
+     &                       utemp,                                     &
+     &                       update)
+      IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
+
+      CALL set_3dfld_tile (ng, tile, iNLM, idVclm,                    &
+     &                       LBi, UBi, LBj, UBj, 1, N(ng),              &
+     &                       CLIMA(ng)%vclmG,                           &
+     &                       vtemp,                                     &
+     &                       update)
+      IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
+      ! KMT undo time shift
+      time(ng)=time(ng)-dt(ng)
+
+
         DO k=1,N(ng)
-          DO j=Jstr,Jend
-            DO i=Istr,Iend
-              OCEAN(ng)%u(i,j,k,nnew(ng)) = CLIMA(ng)%uclm(i,j,k)
-              OCEAN(ng)%v(i,j,k,nnew(ng)) = CLIMA(ng)%vclm(i,j,k)
+          DO j=Jstr-1,Jend+1
+            DO i=Istr-1,Iend+1
+              ! KMT this fixes time stepping to match online
+              OCEAN(ng)%u(i,j,k,nrhs(ng)) = CLIMA(ng)%uclm(i,j,k)
+              OCEAN(ng)%u(i,j,k,nnew(ng)) = utemp(i,j,k)
+              OCEAN(ng)%v(i,j,k,nrhs(ng)) = CLIMA(ng)%vclm(i,j,k)
+              OCEAN(ng)%v(i,j,k,nnew(ng)) = vtemp(i,j,k)
             END DO
           END DO
         END DO
@@ -2131,12 +2187,12 @@
      &                        OCEAN(ng)%u(:,:,:,i),OCEAN(ng)%v(:,:,:,i))
       END DO
 #   endif
-
 #  endif
       END IF
 !
 !-----------------------------------------------------------------------
 !  Set tracers climatology.
+!  KMT don't need temp/salt for offline case
 !-----------------------------------------------------------------------
 !
 #  ifdef ANA_TCLIMA
@@ -2159,38 +2215,39 @@
       END DO
 #  endif
 
-
-#  if defined OFFLINE
-      DO itrc=1,NAT
-        DO k=1,N(ng)
-          DO j=Jstr,Jend
-            DO i=Istr,Iend
-              OCEAN(ng)%t(i,j,k,nnew(ng),itrc) =                        &
-     &                  CLIMA(ng)%tclm(i,j,k,itrc)
-            ENDDO
-          ENDDO
-        ENDDO
-      ENDDO
-      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
-        DO itrc=1,NAT
-          DO i=1,2
-            CALL exchange_r3d_tile (ng, tile,                           &
-     &                              LBi, UBi, LBj, UBj, 1, N(ng),       &
-     &                              OCEAN(ng)%t(:,:,:,i,itrc))
-          END DO
-        END DO
-      END IF
-#   ifdef DISTRIBUTE
-      DO itrc=1,NAT
-        DO i=1,2
-          CALL mp_exchange3d (ng, tile, iNLM, 1,                        &
-     &                        LBi, UBi, LBj, UBj, 1, N(ng),             &
-     &                        NghostPoints,                             &
-     &                        EWperiodic(ng), NSperiodic(ng),           &
-     &                        OCEAN(ng)%t(:,:,:,i,itrc))
-        END DO
-      END DO
-#   endif
+#  if defined OFFLINE && defined ATCLIMATOLOGY  
+      DO itrc=1,NAT     
+        DO k=1,N(ng)    
+          DO j=Jstr-1,Jend+1    
+            DO i=Istr-1,Iend+1  
+              ! KMT changed so that both time steps set at once for 3D  
+              ! fields instead of alternating, fixing a shift in the output     
+              OCEAN(ng)%t(i,j,k,1,itrc) = CLIMA(ng)%tclm(i,j,k,itrc)    
+              OCEAN(ng)%t(i,j,k,2,itrc) = CLIMA(ng)%tclm(i,j,k,itrc)    
+            ENDDO       
+          ENDDO 
+        ENDDO   
+      ENDDO     
+      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN        
+        DO itrc=1,NAT   
+          DO i=1,2      
+            CALL exchange_r3d_tile (ng, tile,                           &       
+     &                              LBi, UBi, LBj, UBj, 1, N(ng),       &       
+     &                              OCEAN(ng)%t(:,:,:,i,itrc))  
+          END DO        
+        END DO  
+      END IF    
+#   ifdef DISTRIBUTE    
+      DO itrc=1,NAT     
+        DO i=1,2        
+          CALL mp_exchange3d (ng, tile, iNLM, 1,                        &       
+     &                        LBi, UBi, LBj, UBj, 1, N(ng),             &       
+     &                        NghostPoints,                             &       
+     &                        EWperiodic(ng), NSperiodic(ng),           &       
+     &                        OCEAN(ng)%t(:,:,:,i,itrc))        
+        END DO  
+      END DO    
+#   endif       
 #  endif
 
 #  ifdef AICLIMATOLOGY
@@ -2258,8 +2315,8 @@
 #  endif
 #  if defined OFFLINE
       DO k=0,N(ng)
-        DO j=Jstr,Jend
-          DO i=Istr,Iend
+        DO j=Jstr-1,Jend+1
+          DO i=Istr-1,Iend+1
             OCEAN(ng)%W(i,j,k) = CLIMA(ng)%oclm(i,j,k)/                 &
      &          ( (GRID(ng)%pm(i,j)) * (GRID(ng)%pn(i,j)) )
           ENDDO
@@ -2280,43 +2337,181 @@
 #  endif
 # endif
 
-# if defined SOLVE3D && defined AKTCLIMATOLOGY
+# if defined SOLVE3D && defined OFFLINE
 !
 !-----------------------------------------------------------------------
 !  Set vertical diffusion climatology.
 !-----------------------------------------------------------------------
 !
-#  ifdef ANA_AKTCLIMA
-      CALL ana_aktclima (ng, tile, iNLM)
-#  else
-      CALL set_3dfld_tile (ng, tile, iNLM, idAclm,                      &
+
+#  if defined ANA_AKTCLIMA || defined ANA_VMIX
+!      CALL ana_aktclima (ng, tile, iNLM)
+      CALL ana_vmix (ng, tile, iNLM)
+#  elif defined AKTCLIMATOLOGY || defined AKXCLIMATOLOGY
+      CALL set_3dfld_tile (ng, tile, iNLM, idAKtclm,                    &
+     &                     LBi, UBi, LBj, UBj, 0, N(ng),                &
+     &                     CLIMA(ng)%AKtclmG,                           &
+     &                     CLIMA(ng)%AKtclm,                            &
+     &                     update)
+      ! KMT added to access subsequent time step value
+      ! Going to store this in extra GLS index.
+      ! temporarily shift time forward to access next time step value
+      time(ng)=time(ng)+dt(ng)
+        CALL set_3dfld_tile (ng, tile, iNLM, idAKtclm,                  &
      &                       LBi, UBi, LBj, UBj, 0, N(ng),              &
-     &                       CLIMA(ng)%AclmG,                           &
-     &                       CLIMA(ng)%Aclm,                            &
+     &                       CLIMA(ng)%AKtclmG,                         &
+     &                       Akttemp,                                   &
+     &                       update)
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
+      ! undo time shift
+      time(ng)=time(ng)-dt(ng)
+#  endif
+#  if defined AKSCLIMATOLOGY || defined AKXCLIMATOLOGY
+      CALL set_3dfld_tile (ng, tile, iNLM, idAKsclm,                    &
+     &                       LBi, UBi, LBj, UBj, 0, N(ng),              &
+     &                       CLIMA(ng)%AKsclmG,                         &
+     &                       CLIMA(ng)%AKsclm,                          &
+     &                       update)
+      ! KMT added to access subsequent time step value
+      time(ng)=time(ng)+dt(ng)
+        CALL set_3dfld_tile (ng, tile, iNLM, idAKsclm,                  &
+     &                       LBi, UBi, LBj, UBj, 0, N(ng),              &
+     &                       CLIMA(ng)%AKsclmG,                         &
+     &                       Akstemp,                                   &
+     &                       update)
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
+      ! undo time shift
+      time(ng)=time(ng)-dt(ng)
+#  endif
+#  if defined AKVCLIMATOLOGY || defined AKXCLIMATOLOGY
+      CALL set_3dfld_tile (ng, tile, iNLM, idAKvclm,                    &
+     &                       LBi, UBi, LBj, UBj, 0, N(ng),              &
+     &                       CLIMA(ng)%AKvclmG,                         &
+     &                       CLIMA(ng)%AKvclm,                          &
      &                       update)
 #  endif
-#  if defined OFFLINE
+!      DO k=1,3
+#  if defined TKECLIMATOLOGY || defined MIXCLIMATOLOGY
+         CALL set_3dfld_tile (ng, tile, iNLM, idtkeclm,                 &
+     &                       LBi, UBi, LBj, UBj, 0, N(ng),              &
+     &                       CLIMA(ng)%tkeclmG,                         &
+     &                       CLIMA(ng)%tkeclm ,                 &
+     &                       update)
+#  endif
+#  if defined GLSCLIMATOLOGY || defined MIXCLIMATOLOGY
+         CALL set_3dfld_tile (ng, tile, iNLM, idglsclm,                 &
+     &                       LBi, UBi, LBj, UBj, 0, N(ng),              &
+     &                       CLIMA(ng)%glsclmG,                         &
+     &                       CLIMA(ng)%glsclm,                 &
+     &                       update)
+#  endif
+
+#  if defined OFFLINE && !defined ANA_VMIX
       DO k=0,N(ng)
-        DO j=Jstr,Jend
-          DO i=Istr,Iend
-            MIXING(ng)%Akt(i,j,k,2) = CLIMA(ng)%Aclm(i,j,k)
+        DO j=Jstr-1,Jend+1
+          DO i=Istr-1,Iend+1
+#  if defined AKTCLIMATOLOGY || defined AKXCLIMATOLOGY
+            MIXING(ng)%Akt(i,j,k,1) = CLIMA(ng)%AKtclm(i,j,k)
+            ! KMT save subsequent time step
+            MIXING(ng)%gls(i,j,k,nnew(ng)) = Akttemp(i,j,k)
+#  endif
+#  if defined AKSCLIMATOLOGY || defined AKXCLIMATOLOGY
+            MIXING(ng)%Akt(i,j,k,2) = CLIMA(ng)%AKsclm(i,j,k)
+            ! KMT save subsequent time step
+            MIXING(ng)%gls(i,j,k,3) = Akstemp(i,j,k)
+#  endif
+#  if defined AKVCLIMATOLOGY || defined AKXCLIMATOLOGY
+            MIXING(ng)%Akv(i,j,k) = CLIMA(ng)%AKvclm(i,j,k)
+#  endif
+#  if defined TKECLIMATOLOGY || defined MIXCLIMATOLOGY
+            ! KMT changed time index used so no time shift in output
+            MIXING(ng)%tke(i,j,k,nrhs(ng)) = CLIMA(ng)%tkeclm(i,j,k)
+#  endif
+#  if defined GLSCLIMATOLOGY || defined MIXCLIMATOLOGY
+            ! KMT changed time index used so no time shift in output
+            MIXING(ng)%gls(i,j,k,nrhs(ng)) = CLIMA(ng)%glsclm(i,j,k)
+#  endif
           ENDDO
         ENDDO
       ENDDO
+
       IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+#  if defined AKTCLIMATOLOGY || defined AKXCLIMATOLOGY
+        CALL exchange_w3d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj, 0, N(ng),           &
+     &                          MIXING(ng)%Akt(:,:,:,1))
+#  endif
+#  if defined AKSCLIMATOLOGY || defined AKXCLIMATOLOGY
         CALL exchange_w3d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj, 0, N(ng),           &
      &                          MIXING(ng)%Akt(:,:,:,2))
+#  endif
+#  if defined AKVCLIMATOLOGY || defined AKXCLIMATOLOGY
+        CALL exchange_w3d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj, 0, N(ng),           &
+     &                          MIXING(ng)%Akv)
+#  endif
+        DO i=1,3
+#  if defined TKECLIMATOLOGY || defined MIXCLIMATOLOGY
+           CALL exchange_w3d_tile (ng, tile,                            &
+     &                          LBi, UBi, LBj, UBj, 0, N(ng),           &
+     &                          MIXING(ng)%tke(:,:,:,i))
+#  endif
+#  if defined GLSCLIMATOLOGY || defined MIXCLIMATOLOGY
+           CALL exchange_w3d_tile (ng, tile,                            &
+     &                          LBi, UBi, LBj, UBj, 0, N(ng),           &
+     &                          MIXING(ng)%gls(:,:,:,i))
+#  endif
+        ENDDO
       END IF
-#   ifdef DISTRIBUTE
+#  ifdef DISTRIBUTE
+#   if defined AKTCLIMATOLOGY || defined AKXCLIMATOLOGY
+      CALL mp_exchange3d (ng, tile, iNLM, 1,                            &
+     &                    LBi, UBi, LBj, UBj, 0, N(ng),                 &
+     &                    NghostPoints,                                 &
+     &                    EWperiodic(ng), NSperiodic(ng),               &
+     &                    MIXING(ng)%Akt(:,:,:,1))
+#   endif
+#   if defined AKSCLIMATOLOGY || defined AKXCLIMATOLOGY
       CALL mp_exchange3d (ng, tile, iNLM, 1,                            &
      &                    LBi, UBi, LBj, UBj, 0, N(ng),                 &
      &                    NghostPoints,                                 &
      &                    EWperiodic(ng), NSperiodic(ng),               &
      &                    MIXING(ng)%Akt(:,:,:,2))
 #   endif
+#   if defined AKVCLIMATOLOGY || defined AKXCLIMATOLOGY
+      CALL mp_exchange3d (ng, tile, iNLM, 1,                            &
+     &                    LBi, UBi, LBj, UBj, 0, N(ng),                 &
+     &                    NghostPoints,                                 &
+     &                    EWperiodic(ng), NSperiodic(ng),               &
+     &                    MIXING(ng)%Akv)
+#   endif
+
+      DO i=1,3
+#    if defined TKECLIMATOLOGY || defined MIXCLIMATOLOGY      
+         CALL mp_exchange3d (ng, tile, iNLM, 1,                         &
+     &                    LBi, UBi, LBj, UBj, 0, N(ng),                 &
+     &                    NghostPoints,                                 &
+     &                    EWperiodic(ng), NSperiodic(ng),               &
+     &                    MIXING(ng)%tke(:,:,:,i))
+#    endif
+#    if defined GLSCLIMATOLOGY || defined MIXCLIMATOLOGY
+         CALL mp_exchange3d (ng, tile, iNLM, 1,                         &
+     &                    LBi, UBi, LBj, UBj, 0, N(ng),                 &
+     &                    NghostPoints,                                 &
+     &                    EWperiodic(ng), NSperiodic(ng),               &
+     &                    MIXING(ng)%gls(:,:,:,i))
+#    endif
+      ENDDO
+
 #  endif
+#  endif
+!#  endif
 # endif
+!-----------------------------------------------------------------------
+
 
 # if defined W4DPSAS || defined NLM_OUTER || \
      defined W4DPSAS_SENSITIVITY

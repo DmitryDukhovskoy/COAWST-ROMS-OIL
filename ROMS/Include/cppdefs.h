@@ -586,6 +586,7 @@
 ** NONCOHESIVE_BED1    use original bed model of Warner et al 2008, default  **
 ** NONCOHESIVE_BED2    use modified bed model of Sherwood et al, in press    **
 ** SED_FLOCS           use flocculation model of Verney et al., 2011         **
+** SED_OPA             use oil-particle aggregates                           **
 ** FLOC_TURB_DISS      use dissipation for flocculation based on turbulence  **
 ** FLOC_BBL_DISS       use dissipation for flocs from bottom boundary layer  **
 ** SED_DEFLOC          use flocculation decomposition in sediment bed        **
