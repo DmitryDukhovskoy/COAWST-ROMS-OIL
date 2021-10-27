@@ -162,6 +162,11 @@
 # if defined OFFLINE_BIOLOGY
       USE mod_biology
 # endif
+! DDMITRY
+# if defined OFFLINE && defined OIL_BIO && !defined OIL_SEDIMENT
+      USE mod_biology, ONLY : idbio
+# endif 
+! END DD
       USE mod_sources
 !
       USE exchange_3d_mod, ONLY : exchange_r3d_tile
@@ -382,15 +387,12 @@
 ! DDMITRY CPP flags for offline sed/bio
 # elif defined OFFLINE && defined OIL_BIO && defined OIL_SEDIMENT 
       T_LOOP1 :DO itrc=NAT+1,NAT+NST+NBT
-          IF (LtracerCLM(itrc,ng)) CYCLE
 # elif defined OFFLINE && defined OIL_BIO && !defined OIL_SEDIMENT
       T_LOOP1 :DO ibt=1,NBT
           itrc=idbio(ibt)
-          IF (LtracerCLM(itrc,ng)) CYCLE
 # elif defined OFFLINE && defined OIL_SEDIMENT && !defined OIL_BIO
       T_LOOP1 :DO ist=1,NST
           itrc=idsed(ist)
-          IF (LtracerCLM(itrc,ng)) CYCLE
 ! END DD
 #  else
       T_LOOP1 :DO itrc=1,NT(ng)
@@ -687,15 +689,12 @@
 ! DDMITRY CPP flags for offline sed/bio
 # elif defined OFFLINE && defined OIL_BIO && defined OIL_SEDIMENT 
         T_LOOP2 :DO itrc=NAT+1,NAT+NST+NBT
-          IF (LtracerCLM(itrc,ng)) CYCLE
 # elif defined OFFLINE && defined OIL_BIO && !defined OIL_SEDIMENT
         T_LOOP2 :DO ibt=1,NBT
           itrc=idbio(ibt)
-          IF (LtracerCLM(itrc,ng)) CYCLE
 # elif defined OFFLINE && defined OIL_SEDIMENT && !defined OIL_BIO
         T_LOOP2 :DO ist=1,NST
           itrc=idsed(ist)
-          IF (LtracerCLM(itrc,ng)) CYCLE
 ! END DD  
 #else
         T_LOOP2: DO itrc=1,NT(ng)
@@ -1080,15 +1079,12 @@
 ! DDMITRY CPP flags for offline sed/bio
 # elif defined OFFLINE && defined OIL_BIO && defined OIL_SEDIMENT 
         DO itrc=NAT+1,NAT+NST+NBT
-          IF (LtracerCLM(itrc,ng)) CYCLE
 # elif defined OFFLINE && defined OIL_BIO && !defined OIL_SEDIMENT
         DO ibt=1,NBT
           itrc=idbio(ibt)
-          IF (LtracerCLM(itrc,ng)) CYCLE
 # elif defined OFFLINE && defined OIL_SEDIMENT && !defined OIL_BIO
         DO ist=1,NST
           itrc=idsed(ist)
-          IF (LtracerCLM(itrc,ng)) CYCLE
 ! END DD  
 
 #else
@@ -1396,15 +1392,12 @@
 ! DDMITRY CPP flags for offline sed/bio
 # elif defined OFFLINE && defined OIL_BIO && defined OIL_SEDIMENT 
       DO itrc=NAT+1,NAT+NST+NBT
-          IF (LtracerCLM(itrc,ng)) CYCLE
 # elif defined OFFLINE && defined OIL_BIO && !defined OIL_SEDIMENT
       DO ibt=1,NBT
           itrc=idbio(ibt)
-          IF (LtracerCLM(itrc,ng)) CYCLE
 # elif defined OFFLINE && defined OIL_SEDIMENT && !defined OIL_BIO
       DO ist=1,NST
           itrc=idsed(ist)
-          IF (LtracerCLM(itrc,ng)) CYCLE
 ! END DD  
 #  else
       DO itrc=1,NT(ng)

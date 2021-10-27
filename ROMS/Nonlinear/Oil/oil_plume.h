@@ -20,6 +20,7 @@
       CALL oil_paramini_tile (ng, Lstr, Lend,                           &
      &                      DRIFTER(ng) % ROilCmp,                      &  
      &                      DRIFTER(ng) % wfroil0,                      &  
+     &                      DRIFTER(ng) % NprtFlt,                      &
      &                      DRIFTER(ng) % szoil0)
 #ifdef PROFILE
       CALL wclock_off (ng, iNLM, 10, __LINE__, __FILE__)
@@ -30,7 +31,7 @@
 
 !***********************************************************************
       SUBROUTINE oil_paramini_tile(ng, Lstr, Lend,                      &
-     &                            ROilCmp, wfroil0, szoil0)
+     &                            ROilCmp, wfroil0, NprtFlt,szoil0)
 !***********************************************************************
       USE mod_param
       USE mod_parallel
@@ -47,10 +48,12 @@
 #ifdef ASSUMED_SHAPE
       real(r8), intent(inout) :: ROilCmp(:,:)  
       real(r8), intent(inout) :: wfroil0(:,:)  
+      real(r8), intent(inout) :: NprtFlt(:)
       real(r8), intent(inout) :: szoil0(:)     
 #else
       real(r8), intent(inout) :: ROilCmp(Nfloats(ng),Nocmp)  
       real(r8), intent(inout) :: wfroil0(Nfloats(ng),Nocmp)  
+      real(r8), intent(inout) :: NprtFlt(Nfloats(ng))
       real(r8), intent(inout) :: szoil0(Nfloats(ng))         
 #endif
 !
@@ -63,11 +66,15 @@
 
       real(r8) :: rhoo
       real(r8) :: Doil, Docrit, Doil0
+      real(r8) :: voil0, Nprt_min, Nprt_max
       real(r8) :: frsats, frarom, frasph
       real(r8) :: zoil, tsrfo, rsats, rarom, rasph
 
       IF (MyRank.eq.MyMaster) print*,                                   & 
      &    'oil_paramini_tile Lstr=',Lstr,'Lend=',Lend,'MyRank=',MyRank
+
+      Nprt_min = 1.e100_r8
+      Nprt_max = 0.0_r8
 
       DO l=Lstr,Lend
         IF (MyRank.eq.MyMaster) THEN
@@ -103,9 +110,17 @@
             wfroil0(l,2)=frarom
             wfroil0(l,3)=frasph
             szoil0(l)=Doil
+! Find # of prtcles in 1 float
+            voil0=4.0_r8/3.0_r8*pi*(Doil/2.0_r8)**3  ! oil particle volume
+            NprtFlt(l)=VoilFlt/voil0
+            Nprt_min=min(Nprt_min,NprtFlt(l))
+            Nprt_max=max(Nprt_max,NprtFlt(l))
         ENDIF
       ENDDO ! Floats loop
 !
+      IF (MyRank.eq.MyMaster)  &
+     &  print*,' Min/Max Number of Oil Particles in Float: ',           &
+     &         Nprt_min,Nprt_max
       IF (MyRank.eq.MyMaster) print*,'oil initialization is complete '
 # ifdef DISTRIBUTE
 !
@@ -113,6 +128,7 @@
       CALL mp_bcastf(ng, iNLM, ROilCmp)
       CALL mp_bcastf(ng, iNLM, wfroil0)
       CALL mp_bcastf(ng, iNLM, szoil0)
+      CALL mp_bcastf(ng, iNLM, NprtFlt)
 !      IF (MyRank.eq.MyMaster) print*,'oil_paramini_tile: broadcasting 3'
 # endif
 !
@@ -312,12 +328,6 @@
             temp=track(ifTvar(itemp),nfp1,l)
             salt=track(ifTvar(isalt),nfp1,l)
 ! 
-!            frsats=-1.0 ! to initialize oil fractions <0
-!            frarom=-1.0
-!            frasph=-1.0
-!            CALL oil_density_ini(rhoo,frsats,frarom,frasph,             &
-!     &                       rsats,rarom,rasph)
-!            CALL oil_size_ini(Doil)
 !# ifdef OIL_DEBUG
 ! print out all track indices to check - see mod_param.F mod_floats.F
 !              print*,'oil_plume: itstr=',itstr, ' ixgrd=',ixgrd,  &
@@ -395,6 +405,7 @@
           IF (abs(temp)>50.0_r8) THEN
             print*,'*** ERR: oil_plume TEMP is out of bound:',temp
             print*,'float=',l,' itemp=',itemp
+            print*,'ifTvar=',ifTvar
             print*,'track=',track(:,nfp1,l)
           ENDIF
 
@@ -446,13 +457,19 @@
               print*,'*** ERR: float # l=',l
             ENDIF
           ENDDO
-          IF (frsats<1.e-20 .or. frsats>1.0001) THEN
-            print*,'*** ERR: oil_plume: l=',l,'frsats invalid',frsats
-            print*,'***:  frsats:', track(isats,:,l)
-          ELSE IF (frarom<1.e-20 .or. frarom>1.0001) THEN
-            print*,'*** ERR: oil_plume: l=',l,'frarom invalid',frarom
-            print*,'***:  frarom:', track(iarom,:,l)
+#  ifdef OIL_DEBUG
+! ~ZERO fraction of saturates/aromatics can happen
+! if bio or sed. modules are turned on
+! otherwise this should not happen (evaporation should not results in 0
+! sat/ arom)
+          IF (frsats<1.e-20) THEN
+            print*,'CAUTION: oil_plume: l=',l,'frsats ~ZERO:',frsats,&
+     &             ' frarom=',frarom,' Doil=',Doil,' rhoo=',rhoo
+          ELSE IF (frarom<1.e-20) THEN
+            print*,'CAUTION: oil_plume: l=',l,'frarom ~ZERO',frarom, &
+     &             ' frsats=',frsats,' Doil=',Doil,' rhoo=',rhoo
           ENDIF
+#  endif
 ! +++++++
 
 
@@ -639,6 +656,13 @@
       real(r8) :: moil1, rhoo1, voil1, Doil1
 
       integer :: ii
+
+!
+! First check Doil size
+!      IF (Doil.lt.DoilMin) THEN
+!        print*,'Doil < Min Doil, skipping evaporation'
+!        return
+!      ENDIF
 
 ! Given initial mass weight fraction Froil0, oil droplet size Doil0,
 ! densities of oil chemical components Rhoc0 find

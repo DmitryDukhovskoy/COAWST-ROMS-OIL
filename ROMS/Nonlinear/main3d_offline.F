@@ -189,6 +189,16 @@
 !  Read in required data, if any, from input NetCDF files.
 !-----------------------------------------------------------------------
 !
+!# ifdef OIL_DEBUG
+! DDMITRY
+!        DO ng=1,Ngrids
+!          DO tile=first_tile(ng),last_tile(ng),+1
+!            CALL diag (ng, tile)
+!          END DO
+!          IF (Master) print*,'Start:  diag ok ======'
+!        ENDDO
+! END DD
+!# endif
         DO ng=1,Ngrids
           CALL get_data (ng)
           IF (exit_flag.ne.NoError) RETURN
@@ -397,7 +407,7 @@
             CALL rhs3d (ng, tile)
 !#   ifdef OIL_DEBUG
 ! DDMITRY debug
-!           IF (Master) CALL check_tracer(ng,'4) main3d_off') 
+!           IF (Master) CALL check_tracer(ng,4) main3d_off') 
 ! END DD
 !#   endif
 
@@ -476,11 +486,12 @@
 ! Biology and sediments
 ! --------------------------------------------
 #  ifdef BIOLOGY
-            IF (Master) print*,'Calling biology'
+            IF (Master) print*,'main3d_offline: Calling biology'
+!!            CALL bio_degradation(ng, tile) ! simplisitic bio-sink to mimic bio modell
             CALL biology (ng, tile)
 #  endif
 #  ifdef SEDIMENT
-            IF (Master) print*,'Calling sediment'
+            IF (Master) print*,'main3d_offline: Calling sediment'
             CALL sediment (ng, tile)
 #  endif
           END DO
@@ -608,6 +619,7 @@
               ENDIF
             ENDDO  ! tile
 #  endif
+!
 !$OMP BARRIER
 !
 !  Shift floats time indices.
@@ -620,6 +632,17 @@
 
           END IF  ! Lfloats
         END DO  ! ng
+!# ifdef OIL_DEBUG
+! DDMITRY
+!        DO ng=1,Ngrids
+!          DO tile=first_tile(ng),last_tile(ng),+1
+!            CALL diag (ng, tile)
+!          END DO
+!          IF (Master) print*,'main3d: ====== END diag ======, nstp', &
+!           nstp(ng)
+!        ENDDO
+!! END DD
+!# endif
 # endif /* ifdef OFFLINE_FLOATS */
 
       END DO STEP_LOOP

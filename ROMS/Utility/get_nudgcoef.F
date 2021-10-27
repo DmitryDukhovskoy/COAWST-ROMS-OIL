@@ -358,6 +358,8 @@
             RETURN
           ELSE
             IF (Master) THEN
+! DDMITRY debug:
+              print*,'get_nudgcoef: Lnudge, ic=',ic,' itrc=',itrc
               WRITE (stdout,40) TRIM(Vname(2,vindex))//': '//           &
      &                          TRIM(Vname(1,vindex)),                  &
      &                          ng, TRIM(ncname), Fmin, Fmax

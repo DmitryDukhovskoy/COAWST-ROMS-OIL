@@ -1121,26 +1121,7 @@
      &                            GRID(ng) % rmask,                     &
 #  endif
      &                            OCEAN(ng) % t(:,:,:,Tindex,itrc))
-#  ifdef OIL_DEBUG
-! DDMITRY debug
-!              IF (Master) THEN
-!                  ii=LBi+10
-!                  jj=LBj+10
-!                  kk=30
-!                print*,'get_state:Tindx=',Tindex,' OCEAN TR(',itrc,')=',&
-!     &                  OCEAN(ng) % t(ii,jj,kk,Tindex,itrc)
-!                ENDIF
-! END DD
-#  endif
               END IF
-#  ifdef OIL_DEBUG
-! DDMITRY debug
-!              IF (Master) THEN
-!              print*,'get_state: Perfect3d=',Perfect3D,'Tindex=',Tindex
-!                CALL check_tracer(ng,'get_state')
-!              ENDIF
-! END DD
-#  endif
               IF (FoundError(status, nf90_noerr, __LINE__,              &
      &                       __FILE__)) THEN
                 IF (Master) THEN

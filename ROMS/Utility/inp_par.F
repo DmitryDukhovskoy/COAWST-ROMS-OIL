@@ -159,7 +159,7 @@
 #endif
       CALL read_PhyPar (model, inp, out, Lwrite)
 ! DDMITRY
-      IF (Master) print*,'Read_PhyPar is done'
+      IF (Master) print*,'inp_par: Read_PhyPar is done'
 ! DD END
 #ifdef DISTRIBUTE
       CALL mp_bcasti (1, model, exit_flag)
@@ -1133,6 +1133,13 @@
             END IF
           END DO
           NTCLM(ng)=ic
+#ifdef OIL_DEBUG
+! DDMITRY debug
+         if (Master) then
+           print*,'inp_par: N of clim tracers=',NTCLM,' N tot=',NT
+         endif
+! end dd
+#endif
         END IF
 #endif
 
@@ -2353,6 +2360,7 @@
         END DO
 !
 !  Initialize and load fields into structure.
+!
 !
         k=0
         DO ng=1,my_Mgrids

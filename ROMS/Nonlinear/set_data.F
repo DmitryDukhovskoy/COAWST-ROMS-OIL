@@ -2192,25 +2192,25 @@
 #   endif
 #  endif
       END IF
-#  if defined OFFLINE && defined OIL_DEBUG
-! DDMITRY debug
-!      i=IstrR+10
-!      j=JstrR+15
-!      k=50
-!      if (Master) then
-!      print*,'nrhs=',nrhs,'nnew=',nnew,' i=',i,' j=',j
-!      print*, 'u(i,j,k,nrhs)=',OCEAN(ng)%u(i,j,k,nrhs(ng))
-!      print*, 'u(i,j,k,nnew)=',OCEAN(ng)%u(i,j,k,nnew(ng))
-!      print*, 'v(i,j,k,nrhs)=',OCEAN(ng)%v(i,j,k,nrhs(ng))
-!      print*, 'v(i,j,k,nnew)=',OCEAN(ng)%v(i,j,k,nnew(ng))
-!      endif
-! END DD
-# endif
+!!#  if defined OFFLINE && defined OIL_DEBUG
+!! DDMITRY debug
+!!      i=IstrR+10
+!!      j=JstrR+15
+!!      k=50
+!!      if (Master) then
+!!      print*,'nrhs=',nrhs,'nnew=',nnew,' i=',i,' j=',j
+!!      print*, 'u(i,j,k,nrhs)=',OCEAN(ng)%u(i,j,k,nrhs(ng))
+!!      print*, 'u(i,j,k,nnew)=',OCEAN(ng)%u(i,j,k,nnew(ng))
+!!      print*, 'v(i,j,k,nrhs)=',OCEAN(ng)%v(i,j,k,nrhs(ng))
+!!      print*, 'v(i,j,k,nnew)=',OCEAN(ng)%v(i,j,k,nnew(ng))
+!!      endif
+!! END DD
+!!# endif
 !
-!!-----------------------------------------------------------------------
-!!  Set tracers climatology.
+!-----------------------------------------------------------------------
+!  Set tracers climatology.
 !!  KMT don't need temp/salt for offline case
-!!-----------------------------------------------------------------------
+!-----------------------------------------------------------------------
 !
 #  ifdef ANA_TCLIMA
       IF (ANY(LtracerCLM(:,ng))) THEN
@@ -2231,15 +2231,30 @@
         END IF
       END DO
 ! DDMITRY debug
-      i=LBi+10
-      j=LBj+15
-      k=50
-      if (Master) then
-!        print*,'set_data: nrhs=',nrhs,'nnew=',nnew,'i=',i,' j=',j,'k=',k
-        DO inn=1,NAT
-          print*,'set_data:inn=',inn,'OCEAN%Tr=',OCEAN(ng)%t(i,j,k,:,inn)
+!      i=112
+!      j=5
+!      k=49
+!      if (Master) then
+      ic=0 
+      k=49
+      DO j=Jstr-1,Jend+1
+        DO i=Istr-1,Iend+1
+          IF (i.eq.93 .and. j.eq.1) then
+            print*,'set_data: nrhs=',nrhs,'nnew=',nnew,'i=',i, & 
+                       ' j=',j,'k=',k
+            print*,'JstrR/JendR=',JstrR,JendR,' Istr/Iend=',IstrR,IendR
+            DO inn=1,NT(ng)
+              IF (LtracerCLM(inn,ng)) THEN
+                 ic=ic+1
+                print*,'set_data: tclm(inn):', inn,            & 
+                      CLIMA(ng)%tclm(i,j,k,inn),                &
+                  'tclm(ic), ic=',ic, CLIMA(ng)%tclm(i,j,k,ic), &
+                  'tclmG(ic)=',CLIMA(ng)%tclmG(i,j,k,1:2,ic)
+              ENDIF
+            ENDDO
+          ENDIF
         ENDDO
-      endif
+      ENDDO 
 ! END DD
 #  endif
 

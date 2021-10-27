@@ -328,6 +328,14 @@
           DO i=Istr,Iend
             DO k=1,N(ng)
               t(i,j,k,nnew,indx)=t(i,j,k,nnew,indx)+(FC(i,k)-FC(i,k-1))
+!!# ifdef OIL_DEBUG
+! DDMITRY - to avoid small negative values in sed tracer conc
+              IF (t(i,j,k,nnew,indx).lt.0.0_r8)                         &
+                 t(i,j,k,nnew,indx)=1.0e-10_r8
+!!               print*,'sed_settling: *Warn: SedTr<0',t(i,j,k,nnew,indx),&
+!!                      'i,j,k=',i,j,k,'tlev=',nnew,'trcr id=',indx
+! END DD
+!!# endif
             END DO
             settling_flux(i,j,ised)=FC(i,0)
           END DO

@@ -106,6 +106,7 @@
 !  If multi-files, increase (decrease if backward logic) file counter
 !  and set new file names.
 !
+
       IF (Lmulti) THEN
         DO ifile=1,nfiles
           IF (TRIM(Cinfo(ifield,ng)).eq.TRIM(S(ifile)%name)) THEN

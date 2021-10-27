@@ -121,6 +121,13 @@
 !
       IF (Linquire) THEN
         job=2
+# ifdef OIL_DEBUG
+! DDMITRY debug
+        IF (Master) THEN
+          print*,'get_2dfld: ncid=',ncid,' nfiles=',nfiles
+        ENDIF
+! end DD
+# endif
         CALL inquiry (ng, model, job, Iout, Irec, 1, ifield, ncid,      &
      &                Lmulti, nfiles, S)
         IF (FoundError(exit_flag, NoError, __LINE__,                    &

@@ -1852,21 +1852,30 @@
      &                   __FILE__)) RETURN
         END IF
       END DO
+# ifdef OIL_DEBUG
 ! DDMITRY debug
 !       IF (Master) THEN
 !         ii = LBi+10
 !         jj = LBj+10
-!         kk = 30
-!         ic = 0
-!         DO inn=1,NT(ng)
-!           IF (LtracerCLM(inn,ng)) THEN
-!           ic=ic+1
-!        print*,'+++ get_data:: inn=',inn,' LtrCLM=',LtracerCLM(inn,ng), & 
-!      &      'Trc=',CLIMA(ng)%tclmG(ii,jj,kk,:,ic)
-!           ENDIF
-!         ENDDO
-!       ENDIF
+       kk = 49
+       ic = 0
+       DO ii=LBi,Ubi
+         DO jj=LBj,UBj
+           IF (ii.eq.93 .and. jj.eq.1) THEN
+             print*,'get_data: ii=',ii,' jj=',jj,' kk=',kk
+             DO i=1,NT(ng) 
+               IF (LtracerCLM(i,ng)) THEN
+                 ic=ic+1
+                 print*,'get_data: ic=',ic,' tclmG=', &
+                        CLIMA(ng)%tclmG(ii,jj,kk,1:2,ic)
+               ENDIF
+             ENDDO
+           ENDIF
+         ENDDO
+       ENDDO
 ! END DD
+# endif
+
 # endif
 
 ! Added by DJ ------------------------------------

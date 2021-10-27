@@ -719,6 +719,16 @@
           END IF
 # ifdef BIOLOGY
           DO ibt=1,NBT
+!# ifdef OIL_DEBUG
+! DDMITRY
+!            IF (Master) THEN
+!              print*,'diag: max BIO=',maxbio(ibt,ng), &
+!                     'ibt=',ibt,  &
+!                     ' global itrc=',idbio(ibt),  &
+!                     ' nstp=',nstp
+!            ENDIF
+! END DD
+!# endif
             IF (maxbio(ibt,ng).gt.max_bio(ibt)) THEN
               IF (Master) print *, 'BIO trouble in DIAG ', maxbio(:,ng)
               exit_flag=1
@@ -728,6 +738,16 @@
 ! DDMITRY
 # ifdef SEDIMENT
           DO isd=1,NST
+# ifdef OIL_DEBUG
+! DDMITRY
+            IF (Master) THEN
+              print*,'diag: max SED=',maxsed(isd,ng), &
+                     'isd=',isd,  &
+                     ' global itrc=',idsed(isd),  &
+                     ' nstp=',nstp
+            ENDIF
+! END DD
+# endif
             IF (maxsed(isd,ng).gt.max_sed(isd)) THEN
               IF (Master) print*, 'SEDIMENT too high values DIAG.F',    &
      &          maxsed(:,ng)

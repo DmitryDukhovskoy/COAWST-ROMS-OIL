@@ -77,6 +77,9 @@
 !  NCS        Number of cohesive (mud) sediment tracers.               !
 !  NNS        Number of non-cohesive (sand) sediment tracers.          !
 !                                                                      !
+!  Floats:                                                             !
+!  NFV        Total number of float variables                          !
+!                                                                      !
 !  Diagnostic fields parameters:                                       !
 !                                                                      !
 !  NDbio2d    Number of diagnostic 2D biology fields.                  !

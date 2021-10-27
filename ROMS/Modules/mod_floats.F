@@ -37,6 +37,9 @@
 !  wfroil0     Initial oil component fractions                         !
 !             n components is  = Nocmp  (saturates, aromatics, res+asph!
 !             (fr1,fr2,fr3)                                            ! 
+!  NprtFlt    Number of oil particles in a float                       ! 
+!             Initialized from oil vol and Doil in a float             ! 
+!             The number of oil particles does not change during run   ! 
 !  szoil0      Initial oil droplet size (needed to calc vol&mass)      ! 
 !                                                                      ! END DD
 # endif
@@ -75,6 +78,7 @@
           real(r8), pointer :: ROilCmp(:,:) ! DDMITRY
           real(r8), pointer :: wfroil0(:,:) ! DDMITRY
           real(r8), pointer :: szoil0(:)    ! DDMITRY
+          real(r8), pointer :: NprtFlt(:)   ! DDMITRY
 # endif
           real(r8), pointer :: track(:,:,:)
 
@@ -218,6 +222,10 @@
 ! will be read from oil*.in
 ! DoilMn - mean oil size, microm, parameter in Gamma distrib
 !          needed for generating oil sizes
+! DoilMin - minimum droplet size typically of 0.19 µm,
+!           which is a size at which droplets are generally dissolved
+!           sediment model sedopa skips Doil < DoilMn
+!           the oil model continues advecting these particles though
 ! Nocmp - # of oil components
 ! RhoOilComp - densities of oil components
 ! FlxVoilDay - constant Vol Oil flux from the spill, m3/day
@@ -227,7 +235,7 @@
 ! see read_fltpar.F
 !
         integer    :: Nocmp
-        real (r8)  :: DoilMn, FlxVoilDay, VoilFlt
+        real (r8)  :: DoilMn, FlxVoilDay, VoilFlt, DoilMin
         real(r8)   :: CWndOil, DfsOil
         real(r8), allocatable ::  RhoOilComp(:) 
 # endif
@@ -297,6 +305,7 @@
           allocate ( DRIFTER(ng) % ROilCmp(Nfloats(ng),Nocmp) ) ! DDMITRY
           allocate ( DRIFTER(ng) % wfroil0(Nfloats(ng),Nocmp) ) ! DDMITRY
           allocate ( DRIFTER(ng) % szoil0(Nfloats(ng)) )        ! DDMITRY
+          allocate ( DRIFTER(ng) % NprtFlt(Nfloats(ng)) )       ! DDMITRY
 # endif
 
           allocate ( DRIFTER(ng) % track(NFV(ng),0:NFT,Nfloats(ng)) )
@@ -343,6 +352,7 @@
               DRIFTER(ng) % wfroil0(iflt,i) = 0.0_r8
             ENDDO
             DRIFTER(ng) % szoil0(iflt) = 0.0_r8 
+            DRIFTER(ng) % NprtFLt(iflt) = 0.0_r8
 ! END DD
 # endif
             DO i=0,izrhs
@@ -423,6 +433,7 @@
 #ifdef FLOAT_OIL
         Nocmp      = 0      ! # of oil compnents initial value, set in oil*.in
         DoilMn     = -999.0 ! mean oil size, set in oil*.in
+        DoilMin    = -999.0 ! minimum oil droplet size for degradation/evaporation
         FlxVoilDay = -999.0 ! oil flux rate, m3/day
         VoilFlt    = -999.0 ! oil volume in 1 float
         DfsOil     = -999.0 ! oil diffusiv., used in rand walk approxim. 
@@ -433,6 +444,8 @@
           ic=ic+1
           ifTvar(i)=ic
         END DO
+! DDMITRY
+          print*,'mod_floats: MT=',MT,'ifTvar=',ifTvar
 #endif
       END IF
 

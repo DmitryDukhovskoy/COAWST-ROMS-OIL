@@ -132,6 +132,28 @@
         END IF
       END IF
 !
+! DDMITRY
+! For nfiles>2 clim files, there is a bug
+! for bio tracer variables written in 2 separates files
+! CLM1 and CLM2
+! The 1st variable is correctly found in CLM2 after
+! failing to find it in CLM1, 
+! for variable 2
+! ncid gets linkes to a wrong file ncid1 --> CLM2
+! and inquiry.F gives a wrong "foundit" in CLM1
+! this results in error when NH4_time cannot be found in CLM1
+! becuase it is in CLM2
+! Try to force inquiry in case there >1 clm files
+! and CLM2 file is used
+!      IF (Master) THEN
+!        print*,'get_3dfld: nfiles=',nfiles,'Cinfo=',  &
+!                trim(Cinfo(ifield,ng)),' Sname=',trim(S(1)%name)
+!      ENDIF
+      IF (nfiles.gt.1 .and. trim(Cinfo(ifield,ng)).ne.trim(S(1)%name))  &
+          S(1)%ncid=-1
+! END DD
+
+!
 !-----------------------------------------------------------------------
 !  If appropriate, read in new data.
 !-----------------------------------------------------------------------

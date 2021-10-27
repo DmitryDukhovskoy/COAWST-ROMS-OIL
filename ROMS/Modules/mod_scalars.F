@@ -2337,7 +2337,7 @@
 ! DDMITRY
 #ifdef SEDIMENT
       allocate ( maxsed(NST, Ngrids) )
-      allocate ( max_sed(NBT) )
+      allocate ( max_sed(NST) )
 #endif
       allocate ( gls_m(Ngrids) )
       allocate ( gls_n(Ngrids) )

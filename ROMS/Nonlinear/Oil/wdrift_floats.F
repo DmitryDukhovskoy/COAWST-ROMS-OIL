@@ -233,8 +233,12 @@
 ! v=U*zt*sin(2*pi*zt), zt - normally distributed on [-1,1]
 ! or simply: u=U*randn; v=V*randn;
 ! See paper: Lonin, 1999 for example
-! 
-      sgm=sqrt(2.0_r8*dfsn*dt(ng))
+! note that in Lonin's paper |u| = sqrt(c*dfsn/dt) - m/s
+! here - sgm is in m - see Isobe et al., 2009:
+! "Two-Way Particle-Tracking Model for Specifying Sources of Drifting Objects:
+! Application to the East China Sea Shelf "
+!
+      sgm=sqrt(2.0_r8*dfsn*dt(ng)) ! m
 ! Keep random number < 3 stdev
       nrnd=0.0_r8
       DO icc=1,1000 

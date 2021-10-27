@@ -1,0 +1,14 @@
+ Output/Input Files:
+
+             Output Restart File:  oil_sedbioOFF_rst.nc
+        Prefix for History Files:  oil_sedbioOFF_his
+            Output Averages File:  oil_sedbioOFF_avg.nc
+              Output Floats File:  oil_sedbioOFF_flt.nc
+                 Input Grid File:  Projects/oil_sedbiofR/oil_sedbiof_grd.nc
+    Input Nonlinear Initial File:  Projects/oil_sedbiofR/oil_sedbiof_ini.nc
+        Input Sources/Sinks File:  Projects/oil_sedbiofR/oil_sedbiof_river.nc
+          Input Climatology File:  Projects/oil_sedbiofR/oil_sedbioON_csomio_all.nc
+          Input Climatology File:  Projects/oil_sedbiofR/oil_sedbiof_clm.nc
+   Initial Floats Positions File:  Projects/oil_sedbiofR/oil_sedbiof_floats.in
+         Biology Parameters File:  Projects/oil_sedbiofR/bio_CSOMIO_OFF.in
+

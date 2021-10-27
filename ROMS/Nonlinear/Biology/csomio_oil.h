@@ -137,6 +137,7 @@
      &                   DIAGS(ng) % DiaBio3d,                          &
 #endif
      &                   OCEAN(ng) % t,                                 &
+     &                   OIL3D(ng) % Doil,                              &
      &                   OIL3D(ng) % Coil)                  ! DDMITRY
 
 #ifdef PROFILE
@@ -172,6 +173,7 @@
      &                         DiaBio2d, DiaBio3d,                      &
 #endif
      &                         t,                                       &
+     &                         Doil,                                    & ! DDMITRY
      &                         Coil)                            !  DDMITRY
 !-----------------------------------------------------------------------
 !
@@ -202,6 +204,7 @@
 #  endif
 # endif
 ! DDMITRY
+      real(r8), intent(in)    :: Doil(LBi:,LBj:,:)
       real(r8), intent(inout) :: Coil(LBi:,LBj:,:,:)
 ! END DD
       real(r8), intent(in) :: Hz(LBi:,LBj:,:)
@@ -233,6 +236,7 @@
 #  endif
 # endif
 ! DDMITRY
+      real(r8), intent(in)    :: Doil(LBi:UBi,LBj:UBj,N(ng))
       real(r8), intent(inout) :: Coil(LBi:UBi,LBj:UBj,N(ng),Nocmp)
 ! END DD
       real(r8), intent(in) :: Hz(LBi:UBi,LBj:UBj,UBk)
@@ -521,8 +525,21 @@
           DO i=Istr,Iend
             DO ic=1,Nocmp
               Coil_mmole(i,j,k,ic)=Coil(i,j,k,ic)/wmole(ic)*1.e6_r8
+! If Doil is too small - skip biodegradation
+              IF (Doil(i,j,k).le.DoilMin) Coil_mmole(i,j,k,ic)=0.0_r8
+! Check 
+#ifdef OIL_DEBUG
+              IF (Doil(i,j,k).gt.0.0_r8 .and. &
+     &            Doil(i,j,k).le.DoilMin) THEN
+                print*,'csomio_oil: Doil<DoilMin skipping bio', & 
+     &             ' Doil=',Doil(i,j,k),' DoilMin=',DoilMin, &
+     &             ' Coil_mmole-->0',  &
+     &             Coil_mmole(i,j,k,ic), ' Coil=',Coil(i,j,k,ic), &
+     &             'i,j,k,ic=',i,j,k,ic
+              ENDIF
+#endif
 #ifdef OIL_BIO_DEBUG
-              IF (Coil(i,j,k,1).gt.1.e-6 .and. ip0.lt.0) THEN
+              IF (Coil_mmole(i,j,k,1).gt.1.e-6 .and. ip0.lt.0) THEN
                 ip0=i
                 jp0=j
                 kp0=k
@@ -1770,7 +1787,10 @@
           DO i=Istr,Iend
             DO ic=1,Nocmp
               coil_new=Bio(i,k,iOil(ic))*rOil(i,j,k,ic)   ! oil plume conc 
-              Coil(i,j,k,ic)=coil_new*wmole(ic)*1.e-6_r8
+! Update Coil only if Doil not small
+              IF (Doil(i,j,k).gt.DoilMin)                                      &
+     &           Coil(i,j,k,ic)=coil_new*wmole(ic)*1.e-6_r8
+
               Bio(i,k,iOil(ic))=Bio(i,k,iOil(ic))*                      &
      &                           (1.0_r8-rOil(i,j,k,ic)) ! background oil conc
 

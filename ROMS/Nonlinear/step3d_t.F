@@ -338,6 +338,10 @@
 # ifdef OIL_SEDIMENT
       integer :: ist
 # endif
+# ifdef OFFLINE
+      integer :: indg
+# endif
+! END DD
 # if defined AGE_MEAN && defined T_PASSIVE
       integer :: iage
 # endif
@@ -396,20 +400,35 @@
       JLB=BOUNDS(ng)%LBj(-1)
       JUB=BOUNDS(ng)%UBj(-1)
 # endif
-!# ifdef OIL_DEBUG
-! DDMITRY debug - prints all tracers at a given location
-!       IF (Master) then
-!         ii = LBi+10
-!         jj = LBj+10
-!         kk = 30
-!         print*,'NT=',NT,' NAT=',NAT,' NPT=',NPT,' NST=',NST,' NBT=',NBT
-!         DO inn=1,NT(ng)
-!           print*,'1: step3d_t: inn=',inn,'Trc=', t(ii,jj,kk,:,inn),  &
-!     &          'LtracerCLM=',LtracerCLM(inn,ng)
-!         ENDDO
-!       ENDIF
+# ifdef OIL_DEBUG
+! DDMITRY debug check tracer fields for negative values:
+!      IF (Master) then
+!        print*,'step3d_t: NT=',NT,' NAT=',NAT,' NPT=',NPT, &
+!                ' NST=',NST,' NBT=',NBT
+!      ENDIF
+!        DO itrc=NAT+1,NAT+NST+NBT
+!          DO inn=1,3
+!           trmax = -1.e30
+!           trmin = 1.e30
+!           DO k=1,N(ng)
+!           DO j=Jstr,Jend
+!             DO i=Istr,Iend
+!               dmm=maxval((/trmax,t(i,j,k,inn,itrc)/))
+!               trmax=dmm
+!               dmm=minval((/trmin,t(i,j,k,inn,itrc)/))
+!               trmin=dmm
+!             END DO
+!           END DO
+!           END DO
+!           IF (trmin.lt.0) THEN
+!             print*,' ****  time level =',inn
+!             print*,'step3d_t: Initial check: itrc=',itrc,' trmax=',  &
+!                  trmax,' trmin=',trmin
+!           ENDIF
+!          ENDDO
+!        ENDDO
 ! END DD
-!#endif
+#endif
 !
 !-----------------------------------------------------------------------
 !  Time-step horizontal advection term.
@@ -446,18 +465,15 @@
 # elif defined OFFLINE_TPASSIVE
         DO itrc=NAT+1,NAT+NPT
 ! DDMITRY add oil sed/bio tracers exclude tracers
-! that are being read from CLIMATOLOGY file during offline run
+! that are read from CLIMATOLOGY file during offline run
 # elif defined OFFLINE && defined OIL_BIO && defined OIL_SEDIMENT 
         DO itrc=NAT+1,NAT+NST+NBT
-          IF (LtracerCLM(itrc,ng)) CYCLE
 # elif defined OFFLINE && defined OIL_BIO && !defined OIL_SEDIMENT
         DO ibt=1,NBT
           itrc=idbio(ibt)
-          IF (LtracerCLM(itrc,ng)) CYCLE
 # elif defined OFFLINE && defined OIL_SEDIMENT && !defined OIL_BIO
         DO ist=1,NST
           itrc=idsed(ist)
-          IF (LtracerCLM(itrc,ng)) CYCLE
 ! END DD
 # else
         DO itrc=1,NT(ng)
@@ -487,26 +503,56 @@
 ! DDMITRY add oil sed/bio tracers for OFFLINE
 # elif defined OFFLINE && defined OIL_BIO && defined OIL_SEDIMENT 
       T_LOOP : DO itrc=NAT+1,NAT+NST+NBT
-        IF (LtracerCLM(itrc,ng)) CYCLE
 # elif defined OFFLINE && defined OIL_BIO && !defined OIL_SEDIMENT
       T_LOOP : DO ibt=1,NBT
         itrc=idbio(ibt)
-        IF (LtracerCLM(itrc,ng)) CYCLE
 # elif defined OFFLINE && defined OIL_SEDIMENT && !defined OIL_BIO
       T_LOOP : DO ist=1,NST
         itrc=idsed(ist)
-        IF (LtracerCLM(itrc,ng)) CYCLE
 ! END DD
 # else
       T_LOOP : DO itrc=1,NT(ng)
 # endif
-!# ifdef OIL_DEBUG
+# ifdef OIL_DEBUG_NONE
 ! DDMITRY debug
-!          IF (Master) THEN
-!            print*,'step3d_t: Horiz tr adv itrc=',itrc
-!          ENDIF
-! END DD
-!# endif
+        IF (Master) THEN
+          print*,'step3d_t: Horiz tr adv itrc=',itrc,' nnew=',nnew
+        ENDIF
+        trmax = -1.e30
+        trmin = 1.e30
+        DO k=1,N(ng)
+          DO j=Jstr,Jend
+            DO i=Istr,Iend
+              dmm=maxval((/trmax,t(i,j,k,nnew,itrc)/))
+              trmax=dmm
+              dmm=minval((/trmin,t(i,j,k,nnew,itrc)/))
+              trmin=dmm
+            END DO
+          END DO
+        END DO
+        IF (Master) then
+          print*,'step3d_t: Start nnew itrc=',itrc,' trmax=', &
+                  trmax,' trmin=',trmin
+        ENDIF
+
+        trmax = -1.e30
+        trmin = 1.e30
+        DO k=1,N(ng)
+          DO j=Jstr,Jend
+            DO i=Istr,Iend
+              dmm=maxval((/trmax,t(i,j,k,1,itrc)/))
+              trmax=dmm
+              dmm=minval((/trmin,t(i,j,k,1,itrc)/))
+              trmin=dmm
+            END DO
+          END DO
+        END DO
+        IF (Master) then
+          print*,'step3d_t: Start old itrc=',itrc,' trmax=', &
+                  trmax,' trmin=',trmin
+        ENDIF
+
+# endif
         K_LOOP : DO k=1,N(ng)
 # if defined TS_C2HADVECTION
 !
@@ -543,7 +589,7 @@
      &                          FX, FE)
 
 # elif defined TS_MPDATA
-!
+!  TS_MPDATA
 !  First-order, upstream differences horizontal advective fluxes.
 !
           DO j=JstrVm2,Jendp2i
@@ -696,9 +742,8 @@
           END DO
 # endif
 !
-!  Apply tracers point sources to the horizontal advection terms,
+!  Apply momentum  tracers point sources to the horizontal advection terms,
 !  if any.
-!
           IF (LuvSrc(ng).and.ANY(LtracerSrc(:,ng))) THEN
             DO is=1,Nsrc(ng)
               Isrc=SOURCES(ng)%Isrc(is)
@@ -862,15 +907,12 @@
 ! DDMITRY add oil sed/bio tracers
 # elif defined OFFLINE && defined OIL_BIO && defined OIL_SEDIMENT 
         DO itrc=NAT+1,NAT+NST+NBT
-          IF (LtracerCLM(itrc,ng)) CYCLE
 # elif defined OFFLINE && defined OIL_BIO && !defined OIL_SEDIMENT
         DO ibt=1,NBT
           itrc=idbio(ibt)
-          IF (LtracerCLM(itrc,ng)) CYCLE
 # elif defined OFFLINE && defined OIL_SEDIMENT && !defined OIL_BIO
         DO ist=1,NST
           itrc=idsed(ist)
-          IF (LtracerCLM(itrc,ng)) CYCLE
 ! END DD
 #else
         DO itrc=1,NT(ng)
@@ -1362,16 +1404,14 @@
       DO itrc=NAT+1,NAT+NPT
 ! DDMITRY add oil sed/bio tracers
 # elif defined OFFLINE && defined OIL_BIO && defined OIL_SEDIMENT 
-        DO itrc=NAT+1,NAT+NST+NBT
-          IF (LtracerCLM(itrc,ng)) CYCLE
+      DO itrc=NAT+1,NAT+NST+NBT
+!          IF (LtracerCLM(itrc,ng)) CYCLE
 # elif defined OFFLINE && defined OIL_BIO && !defined OIL_SEDIMENT
-        DO ibt=1,NBT
-          itrc=idbio(ibt)
-          IF (LtracerCLM(itrc,ng)) CYCLE
+      DO ibt=1,NBT
+        itrc=idbio(ibt)
 # elif defined OFFLINE && defined OIL_SEDIMENT && !defined OIL_BIO
-        DO ist=1,NST
-          itrc=idsed(ist)
-          IF (LtracerCLM(itrc,ng)) CYCLE
+      DO ist=1,NST
+        itrc=idsed(ist)
 ! END DD
 #else
       DO itrc=1,NT(ng)
@@ -1396,6 +1436,12 @@
 !
 !  Compute anti-diffusive corrected advection fluxes.
 !
+# ifdef OIL_DEBUG
+! DDMITRY debug
+        trmax = -1.e30
+        trmin = 1.e30
+! END DD
+# endif
         DO k=1,N(ng)
           DO j=Jstr,Jend
             DO i=Istr,Iend+1
@@ -1418,11 +1464,6 @@
 !
 !  Time-step corrected horizontal advection (Tunits m).
 !
-# ifdef OIL_DEBUG
-! DDMITRY debug
-         trmax = -1.e30
-         trmin = 1.e30
-# endif
           DO j=Jstr,Jend
             DO i=Istr,Iend
               cff=dt(ng)*pm(i,j)*pn(i,j)
@@ -1448,6 +1489,15 @@
             END DO
           END DO
         END DO
+!# ifdef OIL_DEBUG
+! DDMITRY debug
+!        IF (Master) then
+!          print*,'step3d_t: anti-diff itrc=',itrc,' trmax=', & 
+!                  trmax,' trmin=',trmin
+!        ENDIF
+!        
+!# endif
+
 !
 !  Compute anti-diffusive corrected vertical advection flux.
 !
@@ -1507,15 +1557,12 @@
 ! DDMITRY add oil sed/bio tracers
 # elif defined OFFLINE && defined OIL_BIO && defined OIL_SEDIMENT 
         DO itrc=NAT+1,NAT+NST+NBT
-          IF (LtracerCLM(itrc,ng)) CYCLE
 # elif defined OFFLINE && defined OIL_BIO && !defined OIL_SEDIMENT
         DO ibt=1,NBT
           itrc=idbio(ibt)
-          IF (LtracerCLM(itrc,ng)) CYCLE
 # elif defined OFFLINE && defined OIL_SEDIMENT && !defined OIL_BIO
         DO ist=1,NST
           itrc=idsed(ist)
-          IF (LtracerCLM(itrc,ng)) CYCLE
 ! END DD
 #elif defined TS_VAR
         DO itrc=1,NAT
@@ -1721,24 +1768,38 @@
 !  to tracer data and apply Land/Sea mask.
 !-----------------------------------------------------------------------
 !
+! DDMITRY: For the OFFLINE case, Tracers 1 and 2 (active tracers T,S)
+!       are not nudged, this causes tracr counter error 
+!       if it is done as in online case:
+! For offline - Clim tracers: skip over active tracers
+!           need to update counter ic
+!       climatology nudged fields also need to be tracked separately
+!    This is probably not ideal and should be imporved but 
+!    works for CSOMIO offline
+# ifdef OFFLINE
       ic=0
+      DO itrc=1,NAT
+        IF (LtracerCLM(itrc,ng)) ic=ic+1
+      ENDDO
+
+      indg=0
+      DO itrc=1,NAT
+        IF (LnudgeTCLM(itrc,ng)) indg=indg+1
+      ENDDO
+# endif      
 #ifdef OFFLINE_BIOLOGY
       DO ibt=1,NBT
         itrc=idbio(ibt)
 # elif defined OFFLINE_TPASSIVE 
       DO itrc=NAT+1,NAT+NPT
-! DDMITRY add oil sed/bio tracers
 # elif defined OFFLINE && defined OIL_BIO && defined OIL_SEDIMENT 
-        DO itrc=NAT+1,NAT+NST+NBT
-          IF (LtracerCLM(itrc,ng)) CYCLE
+      DO itrc=NAT+1,NAT+NST+NBT
 # elif defined OFFLINE && defined OIL_BIO && !defined OIL_SEDIMENT
-        DO ibt=1,NBT
-          itrc=idbio(ibt)
-          IF (LtracerCLM(itrc,ng)) CYCLE
+      DO ibt=1,NBT
+        itrc=idbio(ibt)
 # elif defined OFFLINE && defined OIL_SEDIMENT && !defined OIL_BIO
-        DO ist=1,NST
-          itrc=idsed(ist)
-          IF (LtracerCLM(itrc,ng)) CYCLE
+      DO ist=1,NST
+        itrc=idsed(ist)
 ! END DD
 #else
 !  Initialize tracer counter index. The "tclm" array is only allocated
@@ -1746,6 +1807,7 @@
 !  reduce memory.
 !
 !
+      ic=0
       DO itrc=1,NT(ng)
 #endif
 !
@@ -1754,7 +1816,20 @@
 !
         IF (LtracerCLM(itrc,ng).and.LnudgeTCLM(itrc,ng)) THEN
           ic=ic+1
+! DDMITRY
+#   ifdef OFFLINE
+          indg=indg+1
+#   endif
+! END DD
         END IF
+!# ifdef OIL_DEBUG
+! DDMITRY debug - prints all tracers at a given location
+!      IF (Master) then
+!        print*,'step3d_t: itrc=',itrc,'LtracerCLM=',LtracerCLM(itrc,ng),&
+!               ' LnudgeTCLM=',LnudgeTCLM(itrc,ng),' ic=',ic
+!      ENDIF
+!# endif
+
 !
 !  Set lateral boundary conditions.
 !
@@ -1772,9 +1847,26 @@
               DO i=IstrR,IendR
                 t(i,j,k,nnew,itrc)=t(i,j,k,nnew,itrc)+                  &
      &                             dt(ng)*                              &
+#  ifdef OFFLINE
+!! DDMITRY
+     &                             CLIMA(ng)%Tnudgcof(i,j,k,indg)*      &
+#  else
      &                             CLIMA(ng)%Tnudgcof(i,j,k,ic)*        &
+#  endif
      &                             (CLIMA(ng)%tclm(i,j,k,ic)-           &
      &                              t(i,j,k,nnew,itrc))
+# ifdef OIL_DEBUG
+!! DDMITRY debug
+             if (k.eq.49 .and. i.eq.93.and.j.eq.1) then
+            print*,'JstrR/JendR=',JstrR,JendR,' Istr/Iend=',IstrR,IendR
+            print*,'step3d_t: Tnudgcof',CLIMA(ng)%Tnudgcof(i,j,k,indg), &
+                   'i=',i,' j=',j,' k=',k,' itrc=',itrc,' indg=',indg
+            print*,'step3d_t: ic=',ic,'tclm(ic)=', &
+                      CLIMA(ng)%tclm(i,j,k,ic)
+              print*,'step3d_t: t=',t(i,j,k,:,itrc)
+             endif
+
+# endif
               END DO
             END DO
           END DO

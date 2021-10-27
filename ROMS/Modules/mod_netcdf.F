@@ -1402,6 +1402,14 @@
         my_ncid=ncid
       END IF
 !
+#if defined OIL_DEBUG
+! DDMITRY debug
+!      IF (InpThread) print*,'mod_netcdf: inq_var', &
+!          TRIM(ncname),' ncid=',my_ncid
+! END DD
+#endif
+ 
+!
 !  Inquire NetCDF file.
 !
       IF (InpThread) THEN
@@ -1424,6 +1432,10 @@
      &                                   var_name(i), var_type(i),      &
      &                                   var_ndim(i), var_dim(:,i),     &
      &                                   var_natt(i))
+! DDMITRY DEBUG
+!            print*,'mod_netcdf: inq_var: ncid=',my_ncid,'n_var=',n_var, &
+!                   ' var=',trim(var_name(i))
+! END DD
             IF (status.eq.nf90_noerr) THEN
               DO j=1,MIN(NvarA,var_natt(i))
                 status=nf90_inq_attname(my_ncid, var_id(i), j,          &

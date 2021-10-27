@@ -114,7 +114,7 @@
 
       logical, intent(in) :: bounded(:)
 
-      integer, intent(inout) :: NFLT3D(LBi:,LBj:,:)
+      integer, intent(in) :: NFLT3D(LBi:,LBj:,:)
       real(r8), intent(in) :: Coil1(LBi:,LBj:,:,:)
       real(r8), intent(in) :: Coil0(LBi:,LBj:,:,:)
 #else
@@ -143,7 +143,7 @@
       real(r8) :: Zstr, Zend, Xstr, Xend, Ystr, Yend     
       real(r8) :: xflt, yflt, zflt, rhoo0, rhoo1
       real(r8) :: frsat, frarom, rr, wsum
-      real(r8) :: dmm, alfa, vo0, vo1
+      real(r8) :: dmm, alfa, vo0, vo1, dmm1
 
       real(r8) :: GrdVol(IminS:ImaxS,JminS:JmaxS,N(ng))
 !      real(r8) :: MoilGrd(IminS:ImaxS,JminS:JmaxS,N(ng),Nocmp)
@@ -153,6 +153,7 @@
       real(r8) :: moil_prt0                   ! oil mass in 1 oil particle
       real(r8) :: Nprt_flt          ! # of oil prt in grd cell: Moil=sum(flts)[rhoo*voil*Nprtcl]
       real(r8) :: dsum
+      real(r8) :: wfr_min(Nocmp), wfr_max(Nocmp) ! for checking
 !      real(r8) :: tsrfo
       real(r8), dimension(Lstr:Lend) :: Voil0, Voil1, Doil0, Doil1,     &
      &                                  Rhoil0, Rhoil1
@@ -228,6 +229,8 @@
       mnrcoil=1.0_r8
       mxrcoil=0.0_r8
 #endif
+      wfr_min=1.e6_r8
+      wfr_max=-1.0_r8
       DO k=1,N(ng)
         DO j=Jstr,Jend
           DO i=Istr,Iend
@@ -241,7 +244,7 @@
             IF (dsum.lt.1.e-30_r8) THEN
               print*,'map_Eulr2Lgr: ??? ERR: 0 oil grid conc Coil1??', &
      &        'i,j,k=',i,j,k,' Coil1=',Coil1(i,j,k,:),  &
-     &        ' Coil0=',Coil0(i,j,k,:),' Nflts/grid=',nfgrd
+     &        ' Coil0=',Coil0(i,j,k,:),' Nflts in grid=',nfgrd
             ENDIF
 !
 ! Find component reduction during bio/sedimentation processes
@@ -327,12 +330,13 @@
                 wfr1(ic)=rr*wfr0(ic)
                 wsum=wsum+wfr1(ic)
               ENDDO
-! DDMITRY debug
+
               IF (wsum.le.1.e-10) THEN
-                print*,'map_Euler2Lagr:ERR: wsum=',wsum,' rCoil=',rCoil,&
+                print*,'map_Euler2Lagr: **ERR: ZERO wsum=',wsum, &
+     &          ' rCoil=',rCoil,  &
      &          ' wfr0=',wfr0,' l=',l
               ENDIF
-! END DD
+ 
 !
               wfr1=wfr1/wsum
 
@@ -344,13 +348,24 @@
               IF (abs(wsum-1.0_r8)>1.e-10_r8) THEN
                 print*,' *** ERR: map_eulr2lagr total weight is not 1'
               ENDIF
+
+! Checking weight fractions of oil components
+              DO ic=1,Nocmp
+                dmm1=wfr_min(ic)
+                dmm1=min(dmm1,wfr1(ic))
+                wfr_min(ic)=dmm1
+
+                dmm1=wfr_max(ic)
+                dmm1=max(dmm1,wfr1(ic))
+                wfr_max(ic)=dmm1
+              ENDDO
 # ifdef OIL_MAP_DEBUG
               IF (lchck .and. il.eq.ifchck) THEN
-                print*,'eulr2lgr: i=',i,'j=',j,'k=',k,'float=',l,       &
-     &                 'N flts in grid=',nfgrd
-                print*,'eulr2lgr: old oil wght.fract:',wfr0
-                print*,'eulr2lgr: reduction rate oil fract.',rCoil
-                print*,'eulr2lgr: new oil w.fract:',wfr1
+                print*,'eulr2lgr: i,j,k=',i,j,k,'float=',l,             &
+     &                 'N flts in grid=',nfgrd,                         &
+     &                 ' reductn rCoil=',rCoil,                         &
+     &                 'old oil w.fract:',wfr0,                         &
+     &                 ' new oil w.fract:',wfr1
               ENDIF
 # endif
 ! Update oil component weight fraction:
@@ -382,9 +397,9 @@
               ENDIF
 # ifdef OIL_MAP_DEBUG
               IF (lchck .and. il.eq.ifchck) THEN
-                print*,'eulr2lgr: Rho Oil Comp=',RhoOilComp
+!                print*,'eulr2lgr: Rho Oil Comp=',RhoOilComp
                 print*,'eulr2lgr: old rho=',Rhoil0(l),                  &
-     &                 ' new rho=',Rhoil1(l)
+     &                 ' new rho=',Rhoil1(l),' Mass fractn wfr=',wfr1
               ENDIF
 # endif
             ENDDO                            ! floats in the grid cell
@@ -434,14 +449,25 @@
             alfa = Moil1/dmm
 
             IF (alfa>1.0_r8+1.e-10_r8) THEN
-              print*,'eulr2lgr: *** ERR alfa>1',alfa,'nfgrd=',nfgrd
+              print*,'eulr2lgr: *** ERR alfa>1',alfa,'nfgrd=',nfgrd, &
+     &               'Moil1=',Moil1,'Moil0=',Moil0,' Moil1=',Moil1, & 
+     &               'NprtFlt=',Nprt_flt,'GrdVol=',GrdVol(i,j,k)
               DO il=1,nfgrd
                 l=lfltgrd(il)
-                print*,'eulr2lgr: ERR l=',l,'Rhoil1=',Rhoil1(l),        &
-     &           'Voil0=',Voil0(l),'Nprt=',Nprt_flt 
-                print*,'eulr2lgr: ERR  Doil0',Doil0(l),                 &
+                print*,'eulr2lgr: ERR alfa>1 l=',l,'Rhoil1=',Rhoil1(l),&
+     &           'Voil0=',Voil0(l), 'Doil0',Doil0(l),                 & 
      &                 'Rhoil0=',Rhoil0(l)
+!                DO ic=1,Nocmp
+!                  Moil0=Moil0+Coil0(i,j,k,ic)*GrdVol(i,j,k)
+!                  Moil1=Moil1+Coil1(i,j,k,ic)*GrdVol(i,j,k)
+!                ENDDO
+                DO ic=1,3
+                  print*,'eulr2lgr: ERR Coil0(ijk,:)=',Coil0(i,j,k,ic)
+                  print*,'eulr2lgr: ERR Coil1(ijk,:)=',Coil1(i,j,k,ic)
+                ENDDO
+                print*,'   ------  '
               ENDDO
+              print*,'=========================='
             ENDIF
             
             DO il=1,nfgrd
@@ -463,38 +489,25 @@
               ENDIF
 # endif
             ENDDO
-
 !
 ! Update
 !
             DO il=1,nfgrd
               l=lfltgrd(il)
 !              tsrfo=track(isrfo,ntt,l)
-             
 !              IF (tsrfo.lt.1.e-3) THEN
                 track(iroil,ntt,l)=Rhoil1(l)
                 track(isizo,ntt,l)=Doil1(l)
 ! 
 ! Update initial oil droplet size for evaporation module
-              
                 szoil0(l)=Doil1(l)
 !              ENDIF
-!
-!# ifdef OIL_MAP_DEBUG
-!              IF (il.eq.ifchck) THEN
-!                print*,'l=',l,'Rhoil1=',Rhoil1(l),'Doil1=',Doil1(l)
-!                print*,'eulr2lagr: iroil,nf=',track(iroil,nf(ng),l),    &
-!     &                 ' iroil,nfp1=',track(iroil,nfp1,l)
-!                print*,'eulr2lagr: isizo,nf=',track(isizo,nf(ng),l),    & 
-!     &                 'isizo,nfp1=',track(isizo,nfp1(ng),l)
-!              ENDIF
-!# endif
             ENDDO
-
 
           ENDDO
         ENDDO
       ENDDO
+!
 # ifdef OIL_MAP_DEBUG
       IF (maxval(nrcoil).gt.0) THEN
         print*,'eulr2lgr: Rank',MyRank,' # Cnew/Cold < 1 =',nrcoil
@@ -503,9 +516,24 @@
       ENDIF
 ! This shouldn't happen:
       IF (maxval(brcoil).gt.0) THEN
-        print*,'!??! eulr2lgr: Rank',MyRank,' # Cnew/Cold > 1 =',brcoil
+        print*,'eulr2lgr: **ERR MyRank',MyRank, & 
+     &         ' # Cnew/Cold > 1 =',brcoil
       ENDIF
 # endif
+
+      DO ic=1,Nocmp
+# ifdef OIL_DEBUG
+        IF (wfr_max(ic).gt.0.0_r8)    &
+     &    print*,'map_Euler2Lgr: compound=',ic,'New min/max(wfr)=', &
+     &          wfr_min(ic),wfr_max(ic),' MyRank=',MyRank
+# endif
+! zero wfr(1) and wfr(2) possible if bio /sed are coupled
+! possibly evaportation could lead to very low saturates/aromatics
+        IF (wfr_min(ic).lt.1.0e-20) THEN
+          print*,'map_Euler2Lgr: CAUTION wfr1(ic) ZERO: ic=',ic,&
+     &            ' wfr=',wfr_min(ic)
+        ENDIF
+      ENDDO
 
       RETURN
       END SUBROUTINE euler2lagr_tile

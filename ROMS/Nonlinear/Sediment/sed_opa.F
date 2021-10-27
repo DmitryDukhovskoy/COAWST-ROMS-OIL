@@ -64,6 +64,7 @@
      &                       OCEAN(ng) % t,                             &
      &                       OIL3D(ng) % Coil,                          &
      &                       OIL3D(ng) % Doil,                          &
+     &                       OIL3D(ng) % NFLT3D,                        &  ! DDMITRY 
      &                       SEDOPA(ng) % f_mass,                       &
      &                       SEDOPA(ng) % f_diam,                       &
 !     &                       SEDOPA(ng) % oil_mass,                    &    ! DDMITRY
@@ -90,7 +91,7 @@
      &                             bvstr,                               &
      &                             Akt,Akv,Lscale,gls,tke,              &
      &                             t,                                   &
-     &                             Coil, Doil,                          &  
+     &                             Coil, Doil, NFLT3D,                  &  ! DDMITRY 
      &                             f_mass,f_diam,                       &
 !     &                             oil_mass,oil_diam,                  &  ! DDMITRY
      &                             oil_diam,                            &
@@ -114,7 +115,8 @@
       integer, intent(in) :: LBi, UBi, LBj, UBj, UBk, UBt
       integer, intent(in) :: IminS, ImaxS, JminS, JmaxS
       integer, intent(in) :: nstp, nnew
-
+!
+! DDMITRY: Note NSED+NOPA should = NST - # of sed. tracers
       integer, parameter :: NSED=3
       integer, parameter :: NOIL=1   ! 
       integer, parameter :: NOPA=4
@@ -123,6 +125,7 @@
       real(r8), intent(in) :: z_r(LBi:,LBj:,:)
       real(r8), intent(in) :: z_w(LBi:,LBj:,0:)
       real(r8), intent(in) :: omn(LBi:,LBj:)      ! DDMITRY
+      integer, intent(in)  :: NFLT3D(LBi:,LBj:,:) ! DDMITRY
       real(r8), intent(in) :: Hz(LBi:,LBj:,:)
 #  ifdef BBL_MODEL
       real(r8), intent(in) :: bustrcwmax(LBi:,LBj:)
@@ -144,6 +147,7 @@
       real(r8), intent(in) :: z_w(LBi:UBi,LBj:UBj,0:UBk)    ! DDMITRY
       real(r8), intent(in) :: omn(LBi:UBi,LBj:UBj)          ! DDMITRY
       real(r8), intent(in) :: Hz(LBi:UBi,LBj:UBj,UBk)       ! DDMITRY
+      integer, intent(in) ::  NFLT3D(LBi:UBi,LBj:UBj,N(ng))
 #  ifdef BBL_MODEL
       real(r8), intent(in) :: bustrcwmax(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: bvstrcwmax(LBi:UBi,LBj:UBj)
@@ -157,7 +161,7 @@
       real(r8), intent(in) :: tke(LBi:UBi,LBj:UBj,0:UBk,3)
       real(r8), intent(in) :: gls(LBi:UBi,LBj:UBj,0:UBk,3)
       real(r8), intent(inout) :: t(LBi:UBi,LBj:UBj,UBk,3,UBt)
-      real(r8), intent(in) :: Coil(LBi:UBi,LBj:UBj,UBk,Nocmp)     !DDMITRY
+      real(r8), intent(inout) :: Coil(LBi:UBi,LBj:UBj,UBk,Nocmp)     !DDMITRY
       real(r8), intent(in) :: Doil(LBi:UBi,LBj:UBj,N(ng))        
 # endif
 
@@ -168,8 +172,6 @@
       real(r8) :: f_rho(NSED)
 !      real(r8), intent(inout)  :: oil_mass(NOIL)      DDMITRY
       real(r8), intent(inout)  :: oil_diam(NOIL) 
-!      real(r8) :: oil_vol(NOIL)   DDMITRY
-!      real(r8) :: oil_rho(NOIL)   DDMITRY
       real(r8), intent(inout)  :: opa_mass(0:NOPA+1)
       real(r8), intent(inout)  :: opa_diam(NOPA)
       real(r8) :: opa_vol(NOPA)
@@ -179,6 +181,7 @@
 ! 
       integer :: i, indx, j, k, ks
       integer :: ised, ioil, iopa
+      integer :: nfgrd  ! DDMITRY
       real(r8), parameter :: f_dp0  = 0.000001_r8
       real(r8), parameter :: f_nf   = 2.39_r8
       real(r8), parameter :: rhoref = 1025.0_r8
@@ -195,24 +198,24 @@
       real(r8) :: GrVol                                        ! DDMITRY
 !
 ! DDMITRY
-# ifdef OIL_MAP_DEBUG
-      real(r8) :: dCoil(IminS:ImaxS,JminS:JmaxS,UBk,Nocmp)     
-      real(r8) :: mxdoil, mndoil
-      integer  :: ndoil, idoil, jdoil, kdoil, imoil, jmoil, kmoil
-# endif
-      integer  :: icc
-      real(r8) :: dmm, oil_rho, oil_vol
+      real(r8) :: CoilOld(IminS:ImaxS,JminS:JmaxS,UBk,Nocmp)     
+      integer  :: inn, itrc
+      integer  :: icc, ic, lneg
+      real(r8) :: dmm, oil_rho, oil_vol, dsum, Moil_grd, Nprt_m3
       real(r8) :: wfr0(IminS:ImaxS,JminS:JmaxS,UBk,Nocmp)      
-      real(r8) :: wfr1(Nocmp)
+      real(r8) :: wfr1(Nocmp), Coil_max(Nocmp)
       real(r8) :: oil_mass(IminS:ImaxS,JminS:JmaxS,UBk)        ! Oil mass in grid cell
+      real(r8) :: susoil_old, told, tnew
+      logical :: NNin2_Zero
 ! END DD
 !
-      real(r8), dimension(IminS:ImaxS,N(ng),NSED) :: susmud
-      real(r8), dimension(IminS:ImaxS,N(ng),NOPA) :: susopa
+      real(r8), dimension(IminS:ImaxS,N(ng),NSED) :: susmud, NN1
+      real(r8), dimension(IminS:ImaxS,N(ng),NOPA) :: susopa, NN3
 ! susoil to track pure oil
 ! DDMITRY
 !      real(r8), dimension(IminS:ImaxS,N(ng),NOIL) :: susoil
-      real(r8), dimension(IminS:ImaxS,N(ng)) :: susoil  
+      real(r8), dimension(IminS:ImaxS,N(ng)) :: susoil
+      real(r8), dimension(IminS:ImaxS,N(ng),NOIL) :: NN2
 ! END DD
 ! susoil2 to track oil in OPA
       real(r8), dimension(IminS:ImaxS,N(ng),NOPA) :: susoil2   
@@ -221,20 +224,24 @@
       real(r8),dimension(1:NOPA)    :: cv_tmp3,NNin3,NNout3
       real(r8),dimension(1:NOPA)    :: cv_tmp4,NNin4,NNout4
 !      real(r8),dimension(1:NOPA)    :: NNin4,NNout4
+
+      real(r8) :: cold, dmm2, cnew ! DDMITRY
        
 !  f_mneg_param : negative mass tolerated to avoid small sub time step
 !  (g/l)
       real(r8), parameter :: f_mneg_param=0.000_r8
 !      real(r8), parameter :: f_clim=0.001_r8
-      real(r8), parameter :: f_clim=0.00001_r8
+      real(r8), parameter :: f_clim=0.0001_r8
+! DDMITRY
+      real(r8), parameter :: eps0=1.0e-30_r8, dsus_max=10.0_r8
 #include "set_bounds.h"
 
       epsilon8=epsilon(1.0)
       oil_mass = 0.0_r8        ! DDMITRY
-      wfr0 = 0.0_r8
+      wfr0 = 0.0_r8            ! DDMITRY
 ! DDMITRY 
 # ifdef OIL_MAP_DEBUG
-      dCoil   = 0.0_r8
+      CoilOld   = 0.0_r8
 # endif          
 !
 ! Set oil component weight fractions
@@ -243,8 +250,7 @@
           DO k=1,N(ng)
             dmm=0.0_r8
             DO icc=1,Nocmp
-              IF (Coil(i,j,k,icc).lt.1.0e-20_r8)                        &
-     &              Coil(i,j,k,icc)=1.0e-20_r8        ! to avoid inf in solutions, keep low background
+              IF (Coil(i,j,k,icc).lt.eps0) Coil(i,j,k,icc)=eps0  ! to avoid inf in solutions
               dmm=dmm+Coil(i,j,k,icc)
             ENDDO
             DO icc=1,Nocmp
@@ -300,44 +306,36 @@
       opa_mass(0) = 0.0_r8
       opa_mass(NOPA+1) = opa_mass(NOPA)*2.0_r8+1.0_r8
 !----------------------------------------------------------------
+!
+!
+!
 
+! ---------------------------------------------
       J_LOOP : DO j=Jstr,Jend
 !
+!
 !  Get oil concentration.
+!  If Doil < DoilMin - skip sedimentation
       susoil = 0.0_r8   ! DDMITRY
-# ifdef OIL_MAP_DEBUG
-      ndoil  = 0
-      idoil  = 0
-      jdoil  = 0
-      kdoil  = 0
-      imoil  = 0
-      jmoil  = 0
-      kmoil  = 0
-      mxdoil = -1.0e10_r8
-      mndoil = 1.e10_r8
-# endif
       dmm=0.0_r8
-      DO icc=1,Nocmp     ! DDMITRY
-       DO k=1,N(ng)
-         DO i=Istr,Iend
+      DO k=1,N(ng)
+        DO i=Istr,Iend
+          nfgrd = NFLT3D(i,j,k)  ! number of floats in grid cell
+          DO icc=1,Nocmp     ! DDMITRY
 !!--------------------------------------------------
-!! Let oil conc. changing with depth
-!          OIL3D(ng)%Doil(i,j,k) = 0.1_r8     ! mm
-!          if (k .le. 5) then 
-!            OIL3D(ng)%Coil(i,j,k,1) = 0.5_r8  ! kg m-3
-!          else
-!            OIL3D(ng)%Coil(i,j,k,1) = 0.1_r8  ! kg m-3 
-!          endif
 !            susoil(i,k,ioil)=(Coil(i,j,k,1)+Coil(i,j,k,2)+Coil(i,j,k,3))/3.0_r8
 ! DDMITRY:
-            susoil(i,k)=susoil(i,k)+Coil(i,j,k,icc)
-!            IF (susoil(i,k).gt.dmm) dmm=susoil(i,k)
-# ifdef OIL_MAP_DEBUG
-            dCoil(i,j,k,icc)=Coil(i,j,k,icc)  ! DDMITRY
-# endif
+            IF (Doil(i,j,k).gt.DoilMin) THEN
+              susoil(i,k)=susoil(i,k)+Coil(i,j,k,icc)
+            ELSE
+              susoil(i,k) = 0.0_r8
+            ENDIF
+            CoilOld(i,j,k,icc)=Coil(i,j,k,icc)  
+! 
 ! END DD
-         END DO
-       END DO
+          END DO
+          IF (nfgrd.eq.0) susoil(i,k)=0.0_r8
+        END DO
       END DO
 
 !  Extract mud variables from tracer arrays, place them into
@@ -386,7 +384,17 @@
           oil_rho = 1.0_r8/dmm 
           oil_vol = pi/6.0_r8*(Doil(i,j,k))**3.0_r8  ! m3
           oil_mass(i,j,k) = oil_vol*oil_rho
-          IF (oil_mass(i,j,k).lt.1.0e-20_r8) oil_mass(i,j,k)=1.0e-20_r8 ! keep small backgr mass avoid inf
+
+          nfgrd = NFLT3D(i,j,k)
+          IF (oil_mass(i,j,k).lt.eps0 .and. susoil(i,k).gt.eps0) THEN
+            print*,'sedopa: **ERR ZERO oil_mass=',oil_mass(i,j,k), &
+     &      ' i,j,k=',i,j,k, &
+     &      ' Vol=',oil_vol,' rho=',oil_rho,' susoil=',susoil(i,k), &
+     &      ' Doil=',Doil(i,j,k), &
+     &      ' nfgrd=',nfgrd,' Coil(i,j,k,:)=',Coil(i,j,k,:)
+          ENDIF
+
+          IF (oil_mass(i,j,k).lt.eps0) oil_mass(i,j,k)=eps0 ! keep small backgr mass avoid inf
           SEDOPA(ng) % oil_diam = Doil(i,j,k)  ! m
           SEDOPA(ng) % oil_vol  = oil_vol  ! m3
           SEDOPA(ng) % oil_mass = oil_mass(i,j,k)
@@ -397,29 +405,38 @@
 
              ! concentration of all mud classes in one grid cell
           cvtotmud=0.0_r8
+          lneg = 0
           DO ised=1,NSED
             cv_tmp1(ised)=susmud(i,k,ised)
             cvtotmud=cvtotmud+cv_tmp1(ised)
             NNin1(ised)=cv_tmp1(ised)/f_mass(ised)
-!                 write(*,*) 'NNin1(ised)=',NNin1(ised)
-!                 print*,'susmud=',i,k,ised,cv_tmp1(ised)
+            IF (NNin1(ised).lt.0.0_r8) lneg=lneg+1
           ENDDO
-
+! DDMITRY
+!          IF (lneg.eq.NSED) THEN
+!            print*,'sed_opa: Negative ALL NNin1',NNin1, &
+!     &             ' susmud=',cv_tmp1, 'f_mass=',f_mass, &
+!     &             ' i,j,k=',i,j,k
+!          ENDIF
           cvtotoil=0.0_r8
+          nfgrd = NFLT3D(i,j,k)
           DO ioil=1,NOIL
-!             cv_tmp2(ioil)=susoil(i,k)  ! DDMITRY
-!             cvtotoil=cvtotoil+cv_tmp2(ioil)  DDMITRY
              cvtotoil=cvtotoil+susoil(i,k)
              NNin2(ioil) = susoil(i,k)/oil_mass(i,j,k)
           ENDDO
+!  Nprt in 1 m3 - should match NNin2
+          Moil_grd=0.0_r8
+          DO ic=1,Nocmp
+            Moil_grd=Moil_grd+Coil(i,j,k,ic)*GrVol
+          ENDDO
+          Nprt_m3=Moil_grd/(oil_mass(i,j,k)*GrVol) ! N prt in 1 m3
+
 
           cvtotopa=0.0_r8
           totoilopa=0.0_r8
           DO iopa=1,NOPA
-             cv_tmp3(iopa)=susopa(i,k,iopa)
+             cv_tmp3(iopa)=max(susopa(i,k,iopa), 0.0_r8)
              cvtotopa=cvtotopa+cv_tmp3(iopa)
-!                 print*,'susopa=',i,k,iopa,susopa(i,k,iopa)
-!                 print*,'opa_mass=',opa_mass(iopa)
              NNin3(iopa) = cv_tmp3(iopa)/opa_mass(iopa)
 !                 write(*,*) 'Number of OPA ',iopa,'is ',NNin3(iopa)
 ! This is hard-coded because only considering one oil class  
@@ -438,10 +455,17 @@
 !                 ENDIF
 !              ENDDO
           IF (cvtotmud .gt. f_clim .and. cvtotoil .gt. f_clim) THEN
-            WRITE(*,*) 'START OPAMOD calculation.'
+            WRITE(*,'(A, E12.4, A, E12.4)') &
+     &       'START OPAMOD calc. cvtotmod=',cvtotmud, &
+     &       ', cvtotoil=',cvtotoil
 !
-!            print*,'oil_rho=',oil_rho,' oil_vol=',oil_vol, & 
-!     &             ' oil_mass=',oil_mass(i,j,k)
+#  ifdef OIL_DEBUG
+            print*,'sedopa: oil_rho=',oil_rho,' oil_vol=',oil_vol, & 
+     &             ' oil_mass=',oil_mass(i,j,k),' nfgrd=',nfgrd, &
+     &             ' Doil=',Doil(i,j,k), &
+     &             ' NNin1=',NNin1, ' NNin2=',NNin2,&
+     &             ' Nprt1m3=',Nprt_m3,' i,j,k=',i,j,k
+#  endif
 
 ! re-calculate coefficients at each grid cell
             CALL opamod_comp_coef(SEDOPA(ng) %  f_mass,  &
@@ -525,25 +549,9 @@
             ENDIF
 # else 
             diss = epsilon8
-!                IF (l_testcase) THEN
-!                  if (j.eq.1.and.i.eq.1.and.k.eq.1) then
-!                     WRITE(*,*) 'VERNEY ET AL TESTCASE FOR FLOCS'
-!                  endif
-!                ELSE
-!                  WRITE(*,*) 'CAUTION :'
-!                  WRITE(*,*) 'CHOOSE A DISSIPATION MODEL FOR FLOCS'
-!                  WRITE(*,*) 'SIMULATION STOPPED'
-!                  STOP
-!                ENDIF
 # endif
 
             CALL flocmod_comp_g(k,i,j,Gval,diss,ng)
-!           print*,'Gval=',Gval
-!            print*,'Step i,j,k, Gval=',i,j,k,Gval
-!            if (Gval .gt. 50.0_r8) then
-!               Gval = 20.0_r8
-!            end if
-!           print*,'Gval=',Gval
 
             DO WHILE (dttemp .le. dt(ng))
               CALL opamod_comp_fsd(NNin1,NNin2,NNin3, &
@@ -569,73 +577,77 @@
                 ENDDO
               ELSE
 
-              IF (f_dt.lt.dt(ng)) THEN
-                DO WHILE (MIN(mneg1,mneg2,mneg3) .lt.f_mneg_param)
-                  IF (dttemp+f_dt .eq. dt(ng)) THEN
-                    CALL opamod_comp_fsd(NNin1,NNin2,NNin3, &
-                               NNout1,NNout2,NNout3,Gval,f_dt,ng)
-                    exit
-                  ELSE
-                    dt1=f_dt
-                    f_dt=MIN(2.0_r8*f_dt,dt(ng)-dttemp)
-                    CALL opamod_comp_fsd(NNin1,NNin2,NNin3, &
-                                 NNout1,NNout2,NNout3,Gval,f_dt,ng)
-!             print*,'NNout31=',NNout1
-!             print*,'NNout32=',NNout2
-!             print*,'NNout33=',NNout3
-                    CALL opamod_mass_control(NNout1,NNout2,NNout3,mneg1,mneg2,mneg3,ng)
-                    IF (MIN(mneg1,mneg2,mneg3) .gt. f_mneg_param) THEN
-                      f_dt=dt1
+                IF (f_dt.lt.dt(ng)) THEN
+                  DO WHILE (MIN(mneg1,mneg2,mneg3) .lt.f_mneg_param)
+                    IF (dttemp+f_dt .eq. dt(ng)) THEN
                       CALL opamod_comp_fsd(NNin1,NNin2,NNin3, &
                                  NNout1,NNout2,NNout3,Gval,f_dt,ng)
                       exit
-                    ENDIF
-                  ENDIF 
-                ENDDO
-              ENDIF 
-            ENDIF
+                    ELSE
+                      dt1=f_dt
+                      f_dt=MIN(2.0_r8*f_dt,dt(ng)-dttemp)
+                      CALL opamod_comp_fsd(NNin1,NNin2,NNin3, &
+                                   NNout1,NNout2,NNout3,Gval,f_dt,ng)
+!             print*,'NNout31=',NNout1
+!             print*,'NNout32=',NNout2
+!             print*,'NNout33=',NNout3
+                      CALL opamod_mass_control(NNout1,NNout2,NNout3,    & 
+     &                                         mneg1,mneg2,mneg3,ng)
+                      IF (MIN(mneg1,mneg2,mneg3) .gt. f_mneg_param) THEN
+                        f_dt=dt1
+                        CALL opamod_comp_fsd(NNin1,NNin2,NNin3, &
+                                   NNout1,NNout2,NNout3,Gval,f_dt,ng)
+                        exit
+                      ENDIF
+                    ENDIF 
+                  ENDDO
+                ENDIF 
+              ENDIF
 
-             dttemp = dttemp + f_dt
+              dttemp = dttemp + f_dt
 
-             NNin1 = NNout1
-             NNin2 = NNout2
-             NNin3 = NNout3
+              NNin1 = NNout1
+              NNin2 = NNout2
+              NNin3 = NNout3
 !             NNin4 = NNout4
 
-             CALL opamod_mass_redistribute(NNin1,NNin3,ng)
+              CALL opamod_mass_redistribute(NNin1,NNin3,ng)
 
 !             print*,'NNin1=',NNin1
 !             print*,'NNin2=',NNin2
 !             print*,'NNin3=',NNin3
 
-             if (dttemp .eq. dt(ng)) exit
+              if (dttemp .eq. dt(ng)) exit
 
             ENDDO !loop on full dt
           ENDIF
 
-           do ised=1,NSED
-              NNin1(ised) = max(NNin1(ised),0.0_r8)
-              susmud(i,k,ised) = NNin1(ised)*f_mass(ised)
+          do ised=1,NSED
+             NNin1(ised) = max(NNin1(ised),0.0_r8)
+             susmud(i,k,ised) = NNin1(ised)*f_mass(ised)
+             NN1(i,k,ised) = NNin1(ised) ! DD
 !              WRITE(*,*) 'susmud=',susmud(i,k,ised)
-           end do
-           
-           do iopa=1,NOPA
-              NNin3(iopa) = max(NNin3(iopa),0.0_r8)
-              susopa(i,k,iopa) = NNin3(iopa)*opa_mass(iopa)
+          end do
+          
+          do iopa=1,NOPA
+             NNin3(iopa) = max(NNin3(iopa),0.0_r8)
+             susopa(i,k,iopa) = NNin3(iopa)*opa_mass(iopa)
+             NN3(i,k,iopa) = NNin3(iopa)  ! DD
 !              susoil2(i,k,iopa) = NNin4(iopa)*oil_mass(1)
 !              print*, 'susopa2=',susopa(i,k,iopa)
-           end do
+          end do
 
-           do ioil=1,NOIL
-              NNin2(ioil) = max(NNin2(ioil),0.0_r8)
-!              WRITE(*,*) 'Before OPA, susoil=',susoil(i,k)
-              susoil(i,k) = NNin2(ioil)*oil_mass(i,j,k)  ! DDMITRY
-!              WRITE(*,*) 'After OPA, susoil=',susoil(i,k)
-           end do
+          do ioil=1,NOIL
+            NNin2(ioil) = max(NNin2(ioil),0.0_r8)    
+            NN2(i,k,ioil) = NNin2(ioil)
+            susoil_old = susoil(i,k)
+            susoil(i,k) = NNin2(ioil)*oil_mass(i,j,k)  
+!            print* 'Before OPA, susoil=',susoil_old(i,k)
+!            WRITE(*,*) 'After OPA, susoil=',susoil(i,k)
+          end do
 
-         ENDDO
-       ENDDO
-
+        ENDDO
+      ENDDO
 !
 !-----------------------------------------------------------------------
 !  Update global tracer variables.
@@ -645,80 +657,115 @@
          indx = idsed(ised)
           DO k=1,N(ng)
             DO i=Istr,Iend
+! DDMITRY - fix blow ups
+               NNin2_Zero=.false.
+               DO ioil=1,NOIL
+                 IF (NN2(i,k,ioil).le.1.0e-30_r8) NNin2_Zero=.true.
+               ENDDO
+
+               IF (NNin2_Zero) CYCLE  ! Skip if NNin2=0
+! ENDD
              if (indx .ge. 3 .and. indx .le. 5) then
                t(i,j,k,nnew,indx)=susmud(i,k,indx-2)*Hz(i,j,k)
-!               WRITE(*,*) 'susmud=',t(i,j,k,nnew,indx) 
-!             else if (indx .ge. 5 .and. indx .le. 8) then
+! DDMITRY: get rid of negative tracer fields
+! those are typically small result from advection scheme
+! this may lead to non-conservative tracer mass
+               IF (t(i,j,k,nnew,indx).lt.0.0_r8)  &
+                   t(i,j,k,nnew,indx) = eps0
              else 
-               t(i,j,k,nnew,indx)=susopa(i,k,indx-5)*Hz(i,j,k)
-!               WRITE(*,*) 'susopa=',t(i,j,k,nnew,indx) 
-!             else if (indx .eq. 9) then
-!               t(i,j,k,nnew,indx)=susoil(i,k,indx-8)*Hz(i,j,k)
-!             else 
-!               t(i,j,k,nnew,indx)=susoil2(i,k,indx-8)*Hz(i,j,k)
-!               WRITE(*,*) 'susooil=',t(i,j,k,nnew,indx) 
+ 
+               told=t(i,j,k,nnew,indx)
+               tnew=susopa(i,k,indx-5)*Hz(i,j,k)
+               IF (told.gt.0.01_r8 .and.  & 
+     &             abs(told-tnew)/told.gt.dsus_max) THEN
+                 print*,'sed_opa: ERR: uncontrolled increase susopa: ',&
+     &           ' i,j,k,nnew,indx=',i,j,k,nnew,indx,  &
+     &           ' old susopa=',told,' new susopa=',tnew, &
+     &           ' NNin3=',NN3(i,k,indx-5), &
+     &           ' NNin2=',NN2(i,k,1)
+                 susoil(i,k) = 0.0_r8 ! Coil won't be updated either
+                 print*,'sed_opa: tracer usopa not updated'
+               ELSE
+                 t(i,j,k,nnew,indx)=susopa(i,k,indx-5)*Hz(i,j,k)
+               ENDIF
+
+               IF (t(i,j,k,nnew,indx).lt.0.0_r8)  &
+                   t(i,j,k,nnew,indx) = eps0
              endif
             ENDDO
          ENDDO
       ENDDO
 
+! DDMITRY
       DO icc=1,Nocmp  !  DDMITRY
-         DO k=1,N(ng)
-            DO i=Istr,Iend
-               Coil(i,j,k,icc) = susoil(i,k)*wfr0(i,j,k,icc)  ! DDMITRY
-# ifdef OIL_MAP_DEBUG
-! DDMITRY debug
-               IF (dCoil(i,j,k,icc).gt.1.e-20 .and. & 
-     &             Coil(i,j,k,icc).lt.1.e-20) THEN
-                 print*,'sedopa: ?? ERR ?? new Coil=0',Coil(i,j,k,icc),&
-     &           ' old Coil=',dCoil(i,j,k,icc),  &
-     &           'i,j,k,icc=',i,j,k,icc, 'susoil=',susoil(i,k), &
-     &           'wfr0=',wfr0(i,j,k,icc),'oil mass=',oil_mass(i,j,k)
-               ENDIF
-               dCoil(i,j,k,icc) = Coil(i,j,k,icc)/dCoil(i,j,k,icc) ! DDMITRY
-# endif
-            ENDDO
-         ENDDO
-      ENDDO
-!
-# ifdef OIL_MAP_DEBUG
-! DDMITRY Testing
-      DO icc=1,Nocmp
         DO k=1,N(ng)
           DO i=Istr,Iend
-            IF (abs(dCoil(i,j,k,icc)-1.0_r8).gt.1.0e-20_r8) THEN
-              ndoil=ndoil+1
-              IF (dCoil(i,j,k,icc)>mxdoil) THEN
-                mxdoil = dCoil(i,j,k,icc)
-                idoil  = i
-                jdoil  = j
-                kdoil  = k
-              ENDIF
-              IF (dCoil(i,j,k,icc)<mndoil) THEN 
-                mndoil = dCoil(i,j,k,icc)
-                imoil  = i
-                jmoil  = j
-                kmoil  = k
-              ENDIF
+            nfgrd = NFLT3D(i,j,k)
+            cold = CoilOld(i,j,k,icc) 
+            Coil(i,j,k,icc) = susoil(i,k)*wfr0(i,j,k,icc)  ! DDMITRY
+
+            IF (Coil(i,j,k,icc).lt.eps0 .and. cold.ge.eps0 .and. &
+     &          nfgrd.gt.0) Coil(i,j,k,icc)=cold
+
+            dmm2 = abs(cold-Coil(i,j,k,icc))/cold
+            IF (cold.lt.Coil(i,j,k,icc) .and. &
+     &             dmm2.le.1.0e-10) THEN
+              Coil(i,j,k,icc) = cold
+            ELSEIF (cold.lt.Coil(i,j,k,icc) .and. &
+     &             dmm2.gt.1.0e-10) THEN
+              print*,'sedopa: ** ERR new Coil>old Coil',  &
+     &          ' New Coil=',Coil(i,j,k,icc),&
+     &          ' old Coil=',cold,  &
+     &          'i,j,k,icc=',i,j,k,icc, 'susoil=',susoil(i,k), &
+     &          '  nfgrd=',nfgrd,  ' NNin2=',NN2(i,k,1), &
+     &          'wfr0=',wfr0(i,j,k,icc),'oil mass=',oil_mass(i,j,k), &
+     &          ' Nocmp=',Nocmp
+            ELSEIF (cold.gt.eps0 .and. &
+     &              Coil(i,j,k,icc).lt.eps0) THEN
+              print*,'sedopa: ERR: Coil=0 & Cold>0 ???', &
+     &               ' Coil=',Coil(i,j,k,icc),' Cold=',cold, &
+     &               ' i,j,k,icc=',i,j,k,icc,        &
+     &               'susoil=',susoil(i,k),' nfgrd=',nfgrd, &
+     &          'wfr0=',wfr0(i,j,k,icc),'oil mass=',oil_mass(i,j,k)
             ENDIF
           ENDDO
         ENDDO
       ENDDO
-! END DD
+                 
+      END DO J_LOOP
+! ---------------------------------------------
+!
+!
+! DDMITRY: Check Coil does not have 0 where N of oil particles > 0
+      Coil_max = 0.0_r8
+      DO k=1,N(ng)
+        DO j=Jstr,Jend
+          DO i=Istr,Iend
+            nfgrd=NFLT3D(i,j,k)
+            IF (nfgrd.eq.0) CYCLE
+! Check
+            dsum = 0.0_r8
+            DO ic=1,Nocmp
+              dsum = dsum+Coil(i,j,k,ic)
+            ENDDO
+            IF (dsum.lt.1.e-30_r8) THEN
+              print*,'sed_opa:  ERR: 0 oil conc new Coil ', &
+     &        'i,j,k=',i,j,k,'New Coil=',Coil(i,j,k,:),  &
+     &        ' CoilOld=',CoilOld(i,j,k,:),' Nflts in grid=',nfgrd
+            ENDIF
+!
+! Check uncontrolled inrease in Coil
+            DO ic=1,Nocmp
+              Coil_max(ic)=max(Coil_max(ic),Coil(i,j,k,ic))
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+# ifdef OIL_DEBUG
+      IF (Coil_max(1).gt.0.0_r8)                                        &
+     &  print*,'sed_opa end: MyRank=',MyRank,' max Coil=',Coil_max
 # endif
 
-      END DO J_LOOP
-!
-# ifdef OIL_MAP_DEBUG
-!  DDMITRY Testing
-      IF (ndoil.gt.0) THEN
-        print*,'SEDM: ', MyRank,'# grid Coil changed=',ndoil,         &
-     &         'max dC=',mxdoil,' i=',idoil,' j=',jdoil,' k=',kdoil
-        print*,'SEDM: ', MyRank,                                    &       
-     &         'min dC=',mndoil,' i=',imoil,' j=',jmoil,'k=',kmoil
-      ENDIF
-! END DD
-# endif
 !
       END SUBROUTINE sed_opamod_tile
 
@@ -1388,7 +1435,7 @@
 
       IF (mneg.gt.0.0_r8) THEN
        IF (npos.eq.0.0_r8) THEN
-         WRITE(*,*) 'CAUTION : all sediment sizes have negative mass!'
+         print*,'CAUTION : all NN1 sediment sizes have negative mass!'
 !         WRITE(*,*) 'SIMULATION STOPPED'
 !         STOP
          DO iv=1,NSED
@@ -1398,7 +1445,8 @@
        ELSE
          DO iv=1,NSED
            IF (NN1(iv).gt.0.0_r8) THEN
-              NN1(iv)=NN1(iv)-mneg/sum(NN1tmp)*NN1(iv)/SEDOPA(ng)%f_mass(iv)
+              NN1(iv)=NN1(iv)-mneg/sum(NN1tmp)*                         &
+     &                NN1(iv)/SEDOPA(ng)%f_mass(iv)
            ELSE
               NN1(iv)=0.0_r8
            ENDIF
@@ -1423,7 +1471,7 @@
 
       IF (mneg.gt.0.0_r8) THEN
        IF (npos.eq.0.0_r8) THEN
-         WRITE(*,*) 'CAUTION : all oil sizes have negative mass!'
+         WRITE(*,*) 'CAUTION : all NN2 oil sizes have negative mass!'
 !         WRITE(*,*) 'SIMULATION STOPPED'
 !         STOP
          DO iv=1,NOIL

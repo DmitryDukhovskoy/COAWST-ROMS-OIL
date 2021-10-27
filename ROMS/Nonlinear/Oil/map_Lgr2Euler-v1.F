@@ -46,7 +46,6 @@
      &                     OIL3D(ng) % NFLT3D,                          &
      &                     DRIFTER(ng) % track,                         &
      &                     DRIFTER(ng) % bounded,                       &
-     &                     DRIFTER(ng) % NprtFlt,                       &
      &                     GRID(ng) % omn,                              &
      &                     GRID(ng) % Hz,                               &
      &                     GRID(ng) % z_r,                              & 
@@ -63,7 +62,7 @@
      &                           LBi, UBi, LBj, UBj,                    &
      &                           IminS, ImaxS, JminS, JmaxS,            &
      &                           Coil, Doil, NFLT3D, track,             &
-     &                           bounded, NprtFlt, omn, Hz, z_r, z_w)
+     &                           bounded, omn, Hz, z_r, z_w)
 !***********************************************************************
 !
       USE mod_param
@@ -87,7 +86,6 @@
       real(r8), intent(in) :: Hz(LBi:,LBj:,:)
       real(r8), intent(in) :: z_r(LBi:,LBj:,:)
       real(r8), intent(in) :: z_w(LBi:,LBj:,0:)
-      real(r8), intent(in) :: NprtFlt(:)
 
       logical, intent(in) :: bounded(:)
 
@@ -100,7 +98,6 @@
       real(r8), intent(in) :: Hz(LBi:UBi,LBj:UBj,N(ng))
       real(r8), intent(in) :: z_r(LBi:UBi,LBj:UBj,N(ng))
       real(r8), intent(in) :: z_w(LBi:UBi,LBj:UBj,0:N(ng))
-      real(r8), intent(in) :: NprtFlt(Nfloats(ng))
 
       logical, intent(in) :: bounded(Nfloats(ng))
       
@@ -112,15 +109,14 @@
 !  Local variables
 !
       integer :: i, j, k, ic, l, nfgrd
-      integer :: mxNflt, sumFlt, NfltLgr  ! for debugging
+      integer :: mxNflt, sumFlt  ! for debugging
 !
       real(r8) :: Zstr, Zend, Xstr, Xend, Ystr, Yend
-      real(r8) :: xflt, yflt, zflt, rhoo, voil, moil_prt
-      real(r8) :: frsat, frarom, dmm, Doil_grd, dmm2
+      real(r8) :: xflt, yflt, zflt, rhoo
+      real(r8) :: frsat, frarom
 
       real(r8) :: GrdVol(IminS:ImaxS,JminS:JmaxS,N(ng))
       real(r8) :: MoilGrd(IminS:ImaxS,JminS:JmaxS,N(ng),Nocmp)
-      real(r8) :: Moil_old(IminS:ImaxS,JminS:JmaxS,N(ng),Nocmp) ! checking
       real(r8) :: wfroil(Nocmp)
       real(r8) :: mxDoil, mxDoil_lgr ! debugging max oil size in Euler. & Lagr grid
 
@@ -156,7 +152,6 @@
       Yend=REAL(BOUNDS(ng)%Jend(MyRank),r8)+0.5_r8
 
       mxNflt=0
-      NfltLgr=0
       DO l=Lstr,Lend
         my_thread(l)=.FALSE.
         IF ((Xstr.le.track(ixgrd,nfp1(ng),l)).and.                      &
@@ -185,11 +180,10 @@
           IF (j.gt.BOUNDS(ng)%Jend(MyRank)) j=BOUNDS(ng)%Jend(MyRank)
 
           NFLT3D(i,j,k)=NFLT3D(i,j,k)+1
-          Doil_grd = track(isizo,nfp1(ng),l)
-          Doil(i,j,k)=Doil(i,j,k)+Doil_grd
+          Doil(i,j,k)=Doil(i,j,k)+track(isizo,nfp1(ng),l)
           rhoo=track(iroil,nfp1(ng),l)
           mxDoil_lgr=max(mxDoil_lgr,track(isizo,nfp1(ng),l))
-          NfltLgr=NfltLgr+1
+
 !     
 !     This part of the code will need to be modified 
 !     if varying Nocmp = # of oil components (fractions) is needed
@@ -203,35 +197,10 @@
           wfroil(3)=1.0_r8-(wfroil(1)+wfroil(2))
 
 !     Oil mass in grd cell by components
-! This formulation does not take into account oil
-! biodegradation and OPA_formation, evaporation, the mass
-! does not change
-!          DO ic=1,Nocmp
-!             MoilGrd(i,j,k,ic)=MoilGrd(i,j,k,ic)+                       &
-!     &                         VoilFlt*rhoo*wfroil(ic)
-!          ENDDO
-!
-! Update Oil mass taking into account decreasing Doil 
-! Assumption: the number of oil particles in 1 float does not change
-          voil=4.0_r8/3.0_r8*pi*(Doil_grd/2.0_r8)**3  ! oil particle volume
-          moil_prt=rhoo*voil
-
-          dmm = 0.0_r8
-          dmm2 = 0.0_r8
           DO ic=1,Nocmp
-            dmm = dmm+VoilFlt*rhoo*wfroil(ic)  ! old version of calculating MoilGrd
-            dmm2 = dmm2+NprtFlt(l)*moil_prt*wfroil(ic)
-            MoilGrd(i,j,k,ic)=MoilGrd(i,j,k,ic)+                        &
-     &                         NprtFlt(l)*moil_prt*wfroil(ic)
+             MoilGrd(i,j,k,ic)=MoilGrd(i,j,k,ic)+                       &
+     &                         VoilFlt*rhoo*wfroil(ic)
           ENDDO
-
-!          IF (dmm.gt.0.0_r8) THEN
-!            print*,'map_Lagr2Eulr: old calc MoilGrd = ',dmm,  &
-!     &             ' new version MoilGrd=',dmm2,' If bio/sed coupled ', & 
-!     &             'may  not be same'
-!            print*,'map_Lagr2Eulr: NprtFlt=',NprtFlt(l),' voil=',voil, &
-!     &             'Moil_prt=',moil_prt
-!          ENDIF
 
         ENDIF
       ENDDO
@@ -279,19 +248,12 @@
           ENDDO
         ENDDO
       ENDDO
-      
-      IF (sumFlt.ne.NfltLgr) THEN
-        print*,'map_Lgr2Euler: N Floats Eulr mismatch N Fl Lagr: ',     &
-     &         ' N Euler=',sumFlt,' N Lagr=',NfltLgr,                   &
-     &         ' MyRank=',MyRank,' Istr/Iend=',Istr,Iend,               &
-     &         ' Jstr/Jend=',Jstr,Jend
-      ENDIF
 
 #ifdef OIL_MAP_DEBUG
-      IF (sumFlt.eq.NfltLgr .and. sumFlt.gt.0) THEN
-        print*,'map_Lgr2Euler end, OK: Eulr MaxDoil=',mxDoil,           &
+      IF (sumFlt>0 .and. mxDoil.gt.1.0e-1) THEN  
+        print*,'lagr2euler_tile end, CHECK: Eulr MaxDoil=',mxDoil,      &
      &         'Lagr MaxDoil=',mxDoil_lgr, 'Eulr # Floats=',sumFlt,     &
-     &         'Lagr # Floats=',NfltLgr,' MyRank=',MyRank
+     &         'Lagr # Floats=',mxNflt
       ENDIF
 #endif
       RETURN

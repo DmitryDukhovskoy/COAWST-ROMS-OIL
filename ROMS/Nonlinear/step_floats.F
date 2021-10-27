@@ -346,27 +346,27 @@
 ! DD END
 #  endif
 !#  if defined FLOAT_OIL
-!#  ifdef OIL_DEBUG
+#  ifdef OIL_DEBUG
 ! DDMITRY
-!      DO l=Lstr,Lend
-!        IF (my_thread(l).and.(l.eq.ifltX)) THEN
-!!        IF (my_thread(l).and.bounded(l)) THEN
-!          print*,'1. step_fl: l=',l,'nfm2=',nfm2, & 
-!     &            'izgrd=',track(izgrd,nfm2,l),  &
-!     &            'nfm1=',nfm1,' izgrd=',track(izgrd,nfm1,l),           &
-!     &            'nf=',nf,' izgrd=',track(izgrd,nf,l),        &
-!     &            'nfp1=',nfp1,' izgrd=',track(izgrd,nfp1,l),  &
-!     &            'dpth(nf)=',track(idpth,nf,l), & 
-!     &               'zslp=',track(izrhs,nf,l),                         &
-!     &               'diffusiv=',track(ifakt,nf,l),                     &
-!     &               'dAkt/ds=',track(ifdak,nf,l),     &
-!     &            ' t=',track(ifTvar(itemp),:,l), &
-!     &            ' s=',track(ifTvar(isalt),:,l)
-!          EXIT
-!        ENDIF
-!      ENDDO  
+      DO l=Lstr,Lend
+        IF (my_thread(l).and.(l.eq.ifltX)) THEN
+!        IF (my_thread(l).and.bounded(l)) THEN
+          print*,'1. step_fl: l=',l,'nfm2=',nfm2, & 
+     &            'izgrd=',track(izgrd,nfm2,l),  &
+     &            'nfm1=',nfm1,' izgrd=',track(izgrd,nfm1,l),           &
+     &            'nf=',nf,' izgrd=',track(izgrd,nf,l),        &
+     &            'nfp1=',nfp1,' izgrd=',track(izgrd,nfp1,l),  &
+     &            'dpth(nf)=',track(idpth,nf,l), & 
+     &               'zslp=',track(izrhs,nf,l),                         &
+     &               'diffusiv=',track(ifakt,nf,l),                     &
+     &               'dAkt/ds=',track(ifdak,nf,l),     &
+     &            ' t=',track(ifTvar(itemp),:,l), &
+     &            ' s=',track(ifTvar(isalt),:,l)
+          EXIT
+        ENDIF
+      ENDDO  
 ! DD END
-!#  endif
+#  endif
 ! DDMITRY
 #  ifdef OIL_DEBUG
       IF (Master) print*,'Calling vwalk_floats, ifltX=',ifltX
@@ -1673,7 +1673,7 @@
 #  if defined FLOAT_OIL && defined OIL_DEBUG
 ! DDMITRY
       IF (Master) THEN
-        print*,'   # of active floats=',NfltA
+        print*,'step_floats:   # of active floats=',NfltA
       ENDIF
 ! END DD
 #  endif

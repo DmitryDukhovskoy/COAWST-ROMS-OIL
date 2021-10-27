@@ -104,6 +104,8 @@
               Npts=load_r(Nval, Rval, Nocmp, RhoOilComp)
             CASE ('DoilMn')
               Npts=load_r(Nval, Rval, Ngrids, DoilMn)
+            CASE ('DoilMin')
+              Npts=load_r(Nval, Rval, Ngrids, DoilMin)
             CASE ('FlxVoilDay')
               Npts=load_r(Nval,Rval,Ngrids,FlxVoilDay)
             CASE ('CWndOil')
@@ -220,7 +222,7 @@
             END IF
 # if defined FLOAT_OIL
 ! DDMITRY
-            WRITE (out,85) Nocmp,DoilMn
+            WRITE (out,85) Nocmp, DoilMn, DoilMin
             WRITE (out,86)
             DO i=1,Nocmp
               WRITE(out,87) i, RhoOilComp(i)
@@ -371,11 +373,12 @@
      &          ' process: ', 2i6,/,18x,'change input script.')
 # if defined FLOAT_OIL
 ! DDMITRY
- 85   FORMAT(/,/' OIL FLOATS PARAMETERS',                               &
-     &        /,  ' ==================================',/,/,            &
-     &        2x,'Nocmp =',1x,i6,2x,'DoilMn=',1x,e12.5,1x,/)
- 86   FORMAT(/,'Oil Components densities',                              &
-     &        /,  ' ==================================',/,/)
+ 85   FORMAT(/,/' OIL FLOATS PARAMETERS:',                              &
+     &        /,  ' =====================',/,/,                         &
+     &        2x,'Nocmp=',1x,i3.3,2x,'DoilMn=',1x,e12.5,2x,             & 
+     &       'DoilMin=',1x,e12.5,/)
+ 86   FORMAT(/,'Oil Components densities:',                             &
+     &        /,  ' =========================',/)
  87   FORMAT(/,5x,'Comp. ',i2.2,2x,'=',2x,f8.2,1x,'kg/m3')
  88   FORMAT(/,1x, 'Floats Released at 1 time=',i5,2x,                  &
      &        'Release TStep, day=',f7.5,/,                             &
