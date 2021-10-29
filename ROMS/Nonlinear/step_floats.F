@@ -351,16 +351,16 @@
       DO l=Lstr,Lend
         IF (my_thread(l).and.(l.eq.ifltX)) THEN
 !        IF (my_thread(l).and.bounded(l)) THEN
-          print*,'1. step_fl: l=',l,'nfm2=',nfm2, & 
-     &            'izgrd=',track(izgrd,nfm2,l),  &
+          print*,'1. step_fl: l=',l,'nfm2=',nfm2,                       &
+     &            'izgrd=',track(izgrd,nfm2,l),                         &
      &            'nfm1=',nfm1,' izgrd=',track(izgrd,nfm1,l),           &
-     &            'nf=',nf,' izgrd=',track(izgrd,nf,l),        &
-     &            'nfp1=',nfp1,' izgrd=',track(izgrd,nfp1,l),  &
-     &            'dpth(nf)=',track(idpth,nf,l), & 
+     &            'nf=',nf,' izgrd=',track(izgrd,nf,l),                 &
+     &            'nfp1=',nfp1,' izgrd=',track(izgrd,nfp1,l),           &
+     &            'dpth(nf)=',track(idpth,nf,l),                        &
      &               'zslp=',track(izrhs,nf,l),                         &
      &               'diffusiv=',track(ifakt,nf,l),                     &
-     &               'dAkt/ds=',track(ifdak,nf,l),     &
-     &            ' t=',track(ifTvar(itemp),:,l), &
+     &               'dAkt/ds=',track(ifdak,nf,l),                      &
+     &            ' t=',track(ifTvar(itemp),:,l),                       &
      &            ' s=',track(ifTvar(isalt),:,l)
           EXIT
         ENDIF

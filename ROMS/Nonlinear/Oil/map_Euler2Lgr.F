@@ -60,7 +60,7 @@
 !
       CALL euler2lagr_tile(ng, tile, Lstr, Lend,                        &
      &                     LBi, UBi, LBj, UBj, ntt,                     &
-     &                     IminS, ImaxS, JminS, JmaxS,                  & 
+     &                     IminS, ImaxS, JminS, JmaxS,                  &
      &                     OIL3D(ng) % Coil,                            &
      &                     OIL3D(ng) % Coil0,                           &
      &                     OIL3D(ng) % NFLT3D,                          &
@@ -70,7 +70,7 @@
      &                     DRIFTER(ng) % szoil0,                        &
      &                     GRID(ng) % omn,                              &
      &                     GRID(ng) % Hz,                               &
-     &                     GRID(ng) % z_r,                              & 
+     &                     GRID(ng) % z_r,                              &
      &                     GRID(ng) % z_w)
 
       RETURN
@@ -82,7 +82,7 @@
      &                           LBi, UBi, LBj, UBj, ntt,               &
      &                           IminS, ImaxS, JminS, JmaxS,            &
      &                           Coil1, Coil0, NFLT3D, track,           &
-     &                           bounded, wfroil0, szoil0, omn,         & 
+     &                           bounded, wfroil0, szoil0, omn,         &
      &                           Hz, z_r, z_w)
 !***********************************************************************
 !
@@ -279,7 +279,7 @@
             lfltgrd=0
             DO l=Lstr,Lend
               IF (my_thread(l).and.bounded(l)) THEN
-                IF (Lindx(l,1).eq.i .and.                               & 
+                IF (Lindx(l,1).eq.i .and.                               &
      &              Lindx(l,2).eq.j .and.                               &
      &              Lindx(l,3).eq.k) THEN
                   nff1=nff1+1
@@ -449,13 +449,13 @@
             alfa = Moil1/dmm
 
             IF (alfa>1.0_r8+1.e-10_r8) THEN
-              print*,'eulr2lgr: *** ERR alfa>1',alfa,'nfgrd=',nfgrd, &
-     &               'Moil1=',Moil1,'Moil0=',Moil0,' Moil1=',Moil1, & 
+              print*,'eulr2lgr: *** ERR alfa>1',alfa,'nfgrd=',nfgrd,    &
+     &               'Moil1=',Moil1,'Moil0=',Moil0,' Moil1=',Moil1,     &
      &               'NprtFlt=',Nprt_flt,'GrdVol=',GrdVol(i,j,k)
               DO il=1,nfgrd
                 l=lfltgrd(il)
-                print*,'eulr2lgr: ERR alfa>1 l=',l,'Rhoil1=',Rhoil1(l),&
-     &           'Voil0=',Voil0(l), 'Doil0',Doil0(l),                 & 
+                print*,'eulr2lgr: ERR alfa>1 l=',l,'Rhoil1=',Rhoil1(l), &
+     &           'Voil0=',Voil0(l), 'Doil0',Doil0(l),                   &
      &                 'Rhoil0=',Rhoil0(l)
 !                DO ic=1,Nocmp
 !                  Moil0=Moil0+Coil0(i,j,k,ic)*GrdVol(i,j,k)
@@ -516,21 +516,21 @@
       ENDIF
 ! This shouldn't happen:
       IF (maxval(brcoil).gt.0) THEN
-        print*,'eulr2lgr: **ERR MyRank',MyRank, & 
+        print*,'eulr2lgr: **ERR MyRank',MyRank, &
      &         ' # Cnew/Cold > 1 =',brcoil
       ENDIF
 # endif
 
       DO ic=1,Nocmp
 # ifdef OIL_DEBUG
-        IF (wfr_max(ic).gt.0.0_r8)    &
-     &    print*,'map_Euler2Lgr: compound=',ic,'New min/max(wfr)=', &
+        IF (wfr_max(ic).gt.0.0_r8)                                      &
+     &    print*,'map_Euler2Lgr: compound=',ic,'New min/max(wfr)=',     &
      &          wfr_min(ic),wfr_max(ic),' MyRank=',MyRank
 # endif
 ! zero wfr(1) and wfr(2) possible if bio /sed are coupled
 ! possibly evaportation could lead to very low saturates/aromatics
         IF (wfr_min(ic).lt.1.0e-20) THEN
-          print*,'map_Euler2Lgr: CAUTION wfr1(ic) ZERO: ic=',ic,&
+          print*,'map_Euler2Lgr: CAUTION wfr1(ic) ZERO: ic=',ic,        &
      &            ' wfr=',wfr_min(ic)
         ENDIF
       ENDDO

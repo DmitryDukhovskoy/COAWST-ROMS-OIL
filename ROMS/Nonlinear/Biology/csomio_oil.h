@@ -531,7 +531,7 @@
 #ifdef OIL_DEBUG
               IF (Doil(i,j,k).gt.0.0_r8 .and. &
      &            Doil(i,j,k).le.DoilMin) THEN
-                print*,'csomio_oil: Doil<DoilMin skipping bio', & 
+                print*,'csomio_oil: Doil<DoilMin skipping bio', &
      &             ' Doil=',Doil(i,j,k),' DoilMin=',DoilMin, &
      &             ' Coil_mmole-->0',  &
      &             Coil_mmole(i,j,k,ic), ' Coil=',Coil(i,j,k,ic), &

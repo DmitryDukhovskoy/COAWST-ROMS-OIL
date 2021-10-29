@@ -460,18 +460,18 @@
      &       ', cvtotoil=',cvtotoil
 !
 #  ifdef OIL_DEBUG
-            print*,'sedopa: oil_rho=',oil_rho,' oil_vol=',oil_vol, & 
-     &             ' oil_mass=',oil_mass(i,j,k),' nfgrd=',nfgrd, &
-     &             ' Doil=',Doil(i,j,k), &
-     &             ' NNin1=',NNin1, ' NNin2=',NNin2,&
+            print*,'sedopa: oil_rho=',oil_rho,' oil_vol=',oil_vol,  &
+     &             ' oil_mass=',oil_mass(i,j,k),' nfgrd=',nfgrd,    &
+     &             ' Doil=',Doil(i,j,k),                            &
+     &             ' NNin1=',NNin1, ' NNin2=',NNin2,                &
      &             ' Nprt1m3=',Nprt_m3,' i,j,k=',i,j,k
 #  endif
 
 ! re-calculate coefficients at each grid cell
             CALL opamod_comp_coef(SEDOPA(ng) %  f_mass,  &
      &                      SEDOPA(ng) %  f_diam,         &
-     &                      SEDOPA(ng) %  oil_mass,       &     
-     &                      SEDOPA(ng) %  oil_diam,       &  
+     &                      SEDOPA(ng) %  oil_mass,       &
+     &                      SEDOPA(ng) %  oil_diam,       &
      &                      SEDOPA(ng) %  opa_mass,       &
      &                      SEDOPA(ng) %  opa_diam,       &
      &                      SEDOPA(ng) %  opa_g1,         &
@@ -676,7 +676,7 @@
  
                told=t(i,j,k,nnew,indx)
                tnew=susopa(i,k,indx-5)*Hz(i,j,k)
-               IF (told.gt.0.01_r8 .and.  & 
+               IF (told.gt.0.01_r8 .and.                   &
      &             abs(told-tnew)/told.gt.dsus_max) THEN
                  print*,'sed_opa: ERR: uncontrolled increase susopa: ',&
      &           ' i,j,k,nnew,indx=',i,j,k,nnew,indx,  &
@@ -856,7 +856,7 @@
 ! OIL-SEDIMENT
       DO iv1=1,NOIL
         DO iv2=1,NSED
-          opa_coll_prob1(iv1,iv2)=1.0_r8/6.0_r8*(oil_diam(iv1)+  &          
+          opa_coll_prob1(iv1,iv2)=1.0_r8/6.0_r8*(oil_diam(iv1)+  &
                                     f_diam(iv2))**3.0_r8
         ENDDO
       ENDDO

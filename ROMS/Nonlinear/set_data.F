@@ -2230,6 +2230,7 @@
      &                   __FILE__)) RETURN
         END IF
       END DO
+# ifdef OIL_DEBUG
 ! DDMITRY debug
 !      i=112
 !      j=5
@@ -2240,13 +2241,13 @@
       DO j=Jstr-1,Jend+1
         DO i=Istr-1,Iend+1
           IF (i.eq.93 .and. j.eq.1) then
-            print*,'set_data: nrhs=',nrhs,'nnew=',nnew,'i=',i, & 
+            print*,'set_data: nrhs=',nrhs,'nnew=',nnew,'i=',i,          &
                        ' j=',j,'k=',k
             print*,'JstrR/JendR=',JstrR,JendR,' Istr/Iend=',IstrR,IendR
             DO inn=1,NT(ng)
               IF (LtracerCLM(inn,ng)) THEN
                  ic=ic+1
-                print*,'set_data: tclm(inn):', inn,            & 
+                print*,'set_data: tclm(inn):', inn,            &
                       CLIMA(ng)%tclm(i,j,k,inn),                &
                   'tclm(ic), ic=',ic, CLIMA(ng)%tclm(i,j,k,ic), &
                   'tclmG(ic)=',CLIMA(ng)%tclmG(i,j,k,1:2,ic)
@@ -2256,6 +2257,7 @@
         ENDDO
       ENDDO 
 ! END DD
+#  endif
 #  endif
 
 #  if defined OFFLINE && defined ATCLIMATOLOGY  
@@ -2275,8 +2277,8 @@
       IF (EWperiodic(ng).or.NSperiodic(ng)) THEN        
         DO itrc=1,NAT   
           DO i=1,2      
-            CALL exchange_r3d_tile (ng, tile,                           &       
-     &                              LBi, UBi, LBj, UBj, 1, N(ng),       &       
+            CALL exchange_r3d_tile (ng, tile,                           &
+     &                              LBi, UBi, LBj, UBj, 1, N(ng),       &
      &                              OCEAN(ng)%t(:,:,:,i,itrc))  
           END DO        
         END DO  
@@ -2284,10 +2286,10 @@
 #   ifdef DISTRIBUTE    
       DO itrc=1,NAT     
         DO i=1,2        
-          CALL mp_exchange3d (ng, tile, iNLM, 1,                        &       
-     &                        LBi, UBi, LBj, UBj, 1, N(ng),             &       
-     &                        NghostPoints,                             &       
-     &                        EWperiodic(ng), NSperiodic(ng),           &       
+          CALL mp_exchange3d (ng, tile, iNLM, 1,                        &
+     &                        LBi, UBi, LBj, UBj, 1, N(ng),             &
+     &                        NghostPoints,                             &
+     &                        EWperiodic(ng), NSperiodic(ng),           &
      &                        OCEAN(ng)%t(:,:,:,i,itrc))        
         END DO  
       END DO    
